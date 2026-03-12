@@ -1,0 +1,8 @@
+PostFilteringParameters :=
+Postfilter type := Separable Gaussian
+Separable Gaussian Filter Parameters :=
+  x-direction fwhm (mm) := 4
+  y-direction fwhm (mm) := 4
+  z-direction fwhm (mm) := 4
+End Separable Gaussian Filter Parameters :=
+End PostFilteringParameters :=
