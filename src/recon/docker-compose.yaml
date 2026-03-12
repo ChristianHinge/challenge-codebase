@@ -2,4 +2,4 @@ services:
 
   recon:
     build: .
-    image: christianhinge/recon
+    image: ghcr.io/bic-mac-challenge/recon
