@@ -99,7 +99,7 @@ if __name__ == "__main__":
         add_sino_path=os.path.join(args.recon_folder, "additive_term_SSRB.hs"),
         mult_sino_path=os.path.join(args.recon_folder, "mult_factors_forSTIR_SSRB.hs"),
         prompts_sino_path=os.path.join(args.recon_folder, "prompts_SSRB.hs"),
-        recon_template=os.path.join(_recon_dir, "OSEM_template.par"),
+        recon_template=os.path.join(_recon_dir, "recon_OSEM_template.par"),
         filter_template=os.path.join(_recon_dir, "postfilter_4mm.par"),
         overwrite=args.overwrite,
     )
