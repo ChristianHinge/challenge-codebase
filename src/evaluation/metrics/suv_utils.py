@@ -1,54 +1,36 @@
 """
 SUV Utilities
 
-Provides conversion of PET activity concentration to SUV.
+Provides SUV normalization factor computation from patient weight and GT PET.
 """
 
-import json
-import nibabel as nib
 import numpy as np
 
 
-def load_pet_as_suv(pet_path, json_path, pet_unit="kBq"):
+def compute_suv_factor(weight_kg, gt_pet_img):
     """
-    Convert PET activity concentration to SUV.
+    Compute SUV normalization factor from patient weight and GT PET image.
+
+    Total dose is estimated by summing GT PET voxels multiplied by voxel volume,
+    avoiding the need for InjectedRadioactivity in metadata.
 
     Parameters
     ----------
-    pet_path : str
-        Path to PET NIfTI file.
-    json_path : str
-        Path to metadata JSON containing:
-            - PatientWeight (kg)
-            - InjectedRadioactivity (MBq)
-    pet_unit : str
-        'kBq'  → PET stored in kBq/mL (final challenge data)
-        'Bq'   → PET stored in Bq/mL (training data)
+    weight_kg : float
+        Patient weight in kg.
+    gt_pet_img : nibabel image
+        Ground-truth PET NIfTI image (any activity unit).
 
     Returns
     -------
-    pet_suv : ndarray
-        PET volume converted to SUV.
+    float
+        Factor to multiply raw PET values by to obtain SUV.
+        SUV = PET * factor
     """
-
-    with open(json_path, "r") as f:
-        meta = json.load(f)
-
-    weight_kg = meta["PatientWeight"]
-    dose_mbq = meta["InjectedRadioactivity"]
-
-    pet = nib.load(pet_path).get_fdata()
-
-    if pet_unit == "kBq":
-        scale = 1e3
-    elif pet_unit == "Bq":
-        scale = 1e6
-    else:
-        raise ValueError("pet_unit must be 'kBq' or 'Bq'")
-
-    norm_factor = weight_kg / (dose_mbq * scale)
-
-    return pet * norm_factor
+    zooms = gt_pet_img.header.get_zooms()
+    voxel_vol_mL = np.prod(zooms[:3]) / 1000.0  # mm^3 → mL
+    total_activity = np.sum(gt_pet_img.get_fdata()) * voxel_vol_mL
+    return weight_kg / total_activity
 
 
 def suv_sanity_check(pet_suv, body_mask, name="PET"):
