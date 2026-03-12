@@ -49,11 +49,11 @@ def run_reconstruction(recon_template,filter_template,add_sino_path, mult_sino_p
     recon_cmd = recon_cmd.replace("MULT_SINO", mult_sino_path)
     recon_cmd = recon_cmd.replace("OUT_FILE_PREFIX", out_image_base)
     
-    recon_file = os.path.join(os.path.dirname(out_image_path), 'intermediates', 'recon.par')
+    recon_file = os.path.join(os.path.dirname(out_image_path), 'recon.par')
     with open(recon_file, "w") as f:
         f.write(recon_cmd)
     
     subprocess.run(['OSMAPOSL', recon_file], check=True)
-    subprocess.run(['postfilter', out_image_base + "_20.hv", out_image_path ,filter_template], check=True)
+    subprocess.run(['postfilter', out_image_path, out_image_base + "_20.hv", filter_template], check=True)
 
 

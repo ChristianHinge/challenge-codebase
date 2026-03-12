@@ -4,19 +4,15 @@ Main Evaluation Script
 Runs quantitative evaluation metrics for the PET attenuation
 correction challenge.
 
-Usage (from project root):
+Usage:
+    python eval.py <subject_path> <pred_pet> <pred_ct> [-all | -specific_metric <name>]
 
-    python -m evaluation_tool.eval \
-        --subject sub-000 \
-        --root data \
-        -all \
-        --pet_unit kBq \
-        --debug
+Example:
+    python eval.py /data/sub-000 /results/pet.nii.gz /results/ct.nii.gz -all
 """
 
 import argparse
 import os
-import json
 import numpy as np
 import nibabel as nib
 
@@ -25,54 +21,29 @@ from metrics import (
     compute_brain_outlier_score,
     compute_organ_bias_from_totalseg,
     compute_tac_bias,
+    compute_whole_body_ct_mae,
 )
 
-
-# =========================================================
-# Helper: Simulate 4D PET (for testing only)
-# =========================================================
-
-def expand_to_4d(pet_path, num_frames=8):
-    """
-    Expand 3D PET into 4D by repeating volume.
-    Used only for local testing when dynamic PET
-    is not available.
-    """
-
-    img = nib.load(pet_path)
-    data = img.get_fdata()
-
-    if data.ndim == 4:
-        return pet_path  # already dynamic
-
-    data_4d = np.stack([data] * num_frames, axis=-1)
-
-    temp_path = pet_path.replace(".nii", "_4d.nii")
-    nib.save(nib.Nifti1Image(data_4d, img.affine), temp_path)
-
-    return temp_path
-
-
-# =========================================================
-# Main
-# =========================================================
 
 def main():
 
     parser = argparse.ArgumentParser(
-        description="PET Evaluation Tool"
+        description="PET Attenuation Correction Challenge — Evaluation"
     )
 
     parser.add_argument(
-        "--subject",
-        required=True,
-        help="Subject identifier (e.g., sub-000)"
+        "subject_path",
+        help="Path to subject directory"
     )
 
     parser.add_argument(
-        "--root",
-        required=True,
-        help="Root data directory"
+        "pred_pet",
+        help="Path to predicted PET NIfTI"
+    )
+
+    parser.add_argument(
+        "pred_ct",
+        help="Path to predicted CT NIfTI"
     )
 
     parser.add_argument(
@@ -87,75 +58,26 @@ def main():
             "whole_body_mae",
             "brain_outlier",
             "organ_bias",
-            "tac_bias"
+            "tac_bias",
+            "ct_mae",
         ],
         help="Run specific metric only"
     )
 
-    parser.add_argument(
-        "--pet_unit",
-        default="kBq",
-        choices=["kBq", "Bq"],
-        help="Unit of PET images (default: kBq)"
-    )
-
-    parser.add_argument(
-        "--test_4d",
-        action="store_true",
-        help="Simulate dynamic PET by repeating 3D volume"
-    )
-
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug output (SUV sanity check)"
-    )
-
     args = parser.parse_args()
 
-    subject_path = os.path.join(args.root, args.subject)
+    subject_path  = args.subject_path
+    ct_label_dir  = os.path.join(subject_path, "ct-label")
+    pet_label_dir = os.path.join(subject_path, "pet-label")
+    features_dir  = os.path.join(subject_path, "features")
 
-    features_path = os.path.join(subject_path, "features")
-    labels_path = os.path.join(subject_path, "labels")
-
-    # -----------------------------------------------------
-    # Define file paths (adjust if naming changes)
-    # -----------------------------------------------------
-
-    pred_pet = os.path.join(
-        features_path,
-        f"{args.subject}_ses-quadra_trc-18FFDG_rec-nacstatOSEM_pet.nii.gz"
-    )
-
-    gt_pet = os.path.join(
-        labels_path,
-        f"{args.subject}_ses-quadra_trc-18FFDG_rec-acstatOSEM_pet.nii.gz"
-    )
-
-    ts_body = os.path.join(
-        labels_path,
-        f"{args.subject}_ses-quadra_acq-LOWDOSE_ce-none_rec-ac_seg-body_space-individual_dseg.nii.gz"
-    )
-
-    ts_total = os.path.join(
-        labels_path,
-        f"{args.subject}_ses-quadra_acq-LOWDOSE_ce-none_rec-ac_seg-total_space-individual_dseg.nii.gz"
-    )
-
-    synthseg = os.path.join(
-        labels_path,
-        f"{args.subject}_ses-vida_task-rest_acq-MPRAGE_seg-synthsegparc_space-individual_dseg.nii.gz"
-    )
-
-    meta_json = os.path.join(features_path, "constants.json")
-
-    # -----------------------------------------------------
-    # Optionally simulate dynamic PET
-    # -----------------------------------------------------
-
-    if args.test_4d:
-        pred_pet = expand_to_4d(pred_pet)
-        gt_pet = expand_to_4d(gt_pet)
+    gt_pet        = os.path.join(pet_label_dir, "acpet.nii.gz")
+    gt_ct         = os.path.join(ct_label_dir,  "ct.nii.gz")
+    body_seg_pet  = os.path.join(pet_label_dir, "body_seg.nii.gz")
+    organ_seg_pet = os.path.join(pet_label_dir, "organ_seg.nii.gz")
+    body_seg_ct   = os.path.join(ct_label_dir,  "body_seg.nii.gz")
+    synthseg      = os.path.join(pet_label_dir, "brain_seg.nii.gz")
+    meta_json     = os.path.join(features_dir,  "metadata.json")
 
     results = {}
 
@@ -166,13 +88,11 @@ def main():
     if args.all or args.specific_metric == "whole_body_mae":
 
         results["Whole-body SUV MAE"] = compute_whole_body_suv_mae(
-            pred_pet_path=pred_pet,
+            pred_pet_path=args.pred_pet,
             gt_pet_path=gt_pet,
-            body_mask_path=ts_body,
-            liver_mask_path=ts_total,
+            body_mask_path=body_seg_pet,
+            liver_mask_path=organ_seg_pet,
             json_path=meta_json,
-            pet_unit=args.pet_unit,
-            debug=args.debug
         )
 
     # =====================================================
@@ -182,7 +102,7 @@ def main():
     if args.all or args.specific_metric == "brain_outlier":
 
         results["Brain Outlier Score"] = compute_brain_outlier_score(
-            pred_paths=[pred_pet],
+            pred_paths=[args.pred_pet],
             gt_paths=[gt_pet],
             brain_mask_paths=[synthseg]
         )
@@ -205,12 +125,11 @@ def main():
         }
 
         results["Organ Bias"] = compute_organ_bias_from_totalseg(
-            pred_path=pred_pet,
+            pred_path=args.pred_pet,
             gt_path=gt_pet,
-            totalseg_path=ts_total,
+            totalseg_path=organ_seg_pet,
             organ_label_dict=organ_labels,
             json_path=meta_json,
-            pet_unit=args.pet_unit
         )
 
     # =====================================================
@@ -219,7 +138,7 @@ def main():
 
     if args.all or args.specific_metric == "tac_bias":
 
-        pet_data = nib.load(pred_pet).get_fdata()
+        pet_data = nib.load(args.pred_pet).get_fdata()
 
         if pet_data.ndim != 4:
             print("TAC Bias skipped: PET is not dynamic (4D).")
@@ -227,9 +146,9 @@ def main():
             frame_durations = np.array([4.0] * pet_data.shape[-1])
 
             results["TAC Bias"] = compute_tac_bias(
-                pred_path=pred_pet,
+                pred_path=args.pred_pet,
                 gt_path=gt_pet,
-                totalseg_path=ts_total,
+                totalseg_path=organ_seg_pet,
                 synthseg_path=synthseg,
                 frame_durations=frame_durations,
                 aorta_label=52,
@@ -237,11 +156,23 @@ def main():
             )
 
     # =====================================================
+    # 5. CT MAE
+    # =====================================================
+
+    if args.all or args.specific_metric == "ct_mae":
+
+        results["CT MAE"] = compute_whole_body_ct_mae(
+            pred_ct_path=args.pred_ct,
+            gt_ct_path=gt_ct,
+            body_mask_path=body_seg_ct,
+        )
+
+    # =====================================================
     # Print Results
     # =====================================================
 
     print("\n================ Evaluation Results ================")
-    print(f"Subject: {args.subject}")
+    print(f"Subject: {os.path.basename(subject_path)}")
     print("----------------------------------------------------")
 
     if not results:
