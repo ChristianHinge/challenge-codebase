@@ -32,11 +32,11 @@ The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is sp
 
 | Split | Subjects | Contents |
 |-------|----------|----------|
-| `train/` (labeled) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
-| `train/` (unlabeled) | 67 | `features/` + `ct-label/` |
+| `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
+| `train/` (no recon) | 67 | `features/` + `ct-label/` |
 | `val/` | 4 | `features/` + `recon/` |
 
-Labeled train subjects support closed-loop local evaluation. Unlabeled train subjects provide CT supervision only. Validation subjects have no labels — submit reconstructed PET to Codabench.
+All train subjects have CT labels. The 8 fully-equipped subjects additionally include sinogram data and PET labels, enabling closed-loop local evaluation. Validation subjects have sinogram data but no labels — submit reconstructed PET to Codabench.
 
 ---
 
