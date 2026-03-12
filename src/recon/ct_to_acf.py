@@ -4,6 +4,99 @@ import nibabel as nib
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
+
+def validate_ct(pred_ct_path, ct_face_path, hu_min_expected=-1024, hu_min_tolerance=20):
+    """
+    Validate the predicted CT against the ground-truth CT.
+
+    Raises ValueError if shape or affine do not match.
+    Prints a warning if the minimum HU value is unrealistically high
+    (suggesting the prediction may not be in proper HU units).
+
+    Parameters
+    ----------
+    pred_ct_path : str
+        Path to the predicted CT NIfTI file.
+    ct_face_path : str
+        Path to the ground-truth CT NIfTI file.
+    hu_min_expected : float
+        Expected minimum HU value (air/background), typically -1024.
+    hu_min_tolerance : float
+        How far the actual minimum may deviate from hu_min_expected before warning.
+    """
+    pred_img = nib.load(pred_ct_path)
+    gt_img = nib.load(ct_face_path)
+
+    if pred_img.shape != gt_img.shape:
+        raise ValueError(
+            f"Shape mismatch between predicted CT {pred_img.shape} "
+            f"and expected {gt_img.shape}."
+        )
+
+    if not np.allclose(pred_img.affine, gt_img.affine, atol=1e-3):
+        raise ValueError(
+            f"Affine mismatch between predicted CT {pred_img.affine} "
+            f"and expected {gt_img.affine}."
+        )
+
+    pred_data = pred_img.get_fdata(dtype=np.float32)
+    hu_min = pred_data.min()
+    if hu_min > hu_min_expected + hu_min_tolerance:
+        print(
+            f"WARNING: Predicted CT minimum HU is {hu_min:.1f}. "
+            f"Expected around {hu_min_expected} (air). "
+            "The image may not be in correct HU units."
+        )
+
+
+def swap_face_from_gt(pred_ct_path, ct_face_path, face_mask_path, output_path=None):
+    """
+    Replace the face region of a predicted CT with the ground-truth CT face.
+
+    The face_mask defines which voxels belong to the face (non-zero = face).
+    All three images must be in the same space/resolution.
+
+    Parameters
+    ----------
+    pred_ct_path : str
+        Path to the predicted CT NIfTI file.
+    ct_face_path : str
+        Path to the ground-truth CT NIfTI file (ct.nii.gz).
+    face_mask_path : str
+        Path to the binary face mask NIfTI file.
+    output_path : str, optional
+        If given, the result is saved here. If None, the image is only returned.
+
+    Returns
+    -------
+    nibabel.Nifti1Image
+        CT with the face region swapped in from the ground truth.
+    """
+    pred_img = nib.load(pred_ct_path)
+    gt_img = nib.load(ct_face_path)
+    mask_img = nib.load(face_mask_path)
+
+    pred_data = pred_img.get_fdata(dtype=np.float32)
+    gt_data = gt_img.get_fdata(dtype=np.float32)
+    face_mask = mask_img.get_fdata() != 0
+
+    if pred_data.shape != gt_data.shape or pred_data.shape != face_mask.shape:
+        raise ValueError(
+            f"Shape mismatch: pred {pred_data.shape}, gt {gt_data.shape}, "
+            f"mask {face_mask.shape}. All inputs must be in the same space."
+        )
+
+    result = pred_data.copy()
+    result[face_mask] = gt_data[face_mask]
+
+    result_img = nib.Nifti1Image(result, pred_img.affine, pred_img.header)
+
+    if output_path is not None:
+        result_img.to_filename(output_path)
+        print(f"Face-swapped CT saved to {output_path}")
+
+    return result_img
+
 def hu_to_mu(ct_path, kvp=120):
     """Carney et al. 2006 (Med Phys 33:976-983) bilinear HU to mu at 511 keV."""
     bone_slope = {80: 3.84e-5, 100: 4.56e-5, 120: 5.10e-5, 140: 5.64e-5}
@@ -17,7 +110,6 @@ def hu_to_mu(ct_path, kvp=120):
     mu = np.clip(mu, 0, None)
 
     return nib.Nifti1Image(mu, ct.affine, ct.header)
-
 
 def smooth_image(img, fwhm_mm=4.0):
     """Gaussian smoothing. FWHM in mm, converted to sigma per axis."""
@@ -33,7 +125,7 @@ def calculate_acf(mumap_hv, reference_sinogram, output_hs):
     subprocess.run(['calculate_attenuation_coefficients', '--ACF', output_hs, mumap_hv, reference_sinogram], check=True)
     
 
-def mumap_to_stir(input_path, output_path, ring_spacing_mm):
+def mumap_to_stir(input_path, output_path, ring_spacing_mm=3.29114):
     """Zero origins, resample z to ring_spacing/2, snap z-origin to grid."""
     plane_sep = ring_spacing_mm / 2
 

@@ -1,5 +1,0 @@
-services:
-  
-  recon:
-    build: .
-    image: recon
