@@ -64,5 +64,31 @@ def mumap_to_stir(input_path, output_path, ring_spacing_mm):
     print(f"z-origin snapped: {o2.z():.4f} -> {snapped_z:.4f} mm, plane_sep={plane_sep:.5f} mm")
 
 
-if __name__ == "__main__":
-    convert_ct_to_acf('ct.nii.gz', 'additive_term_SSRB.hs', 'outs/acf.hs', ring_spacing_mm=3.29114, debug=True)
+# def convert_ct_to_acf(ct_path, reference_sinogram, output_hs, ring_spacing_mm=3.29114,fwhm_mm=4.0,kvp=120):
+#     root = os.path.dirname(output_hs)
+#     mumap_hv_path = os.path.join(root, 'mumap_stir.hv')
+#     mumap_nifti_path = os.path.join(root, 'mumap.nii.gz')
+#     mumuap_smoothed_nifti_path = os.path.join(root, 'mumap_smoothed.nii.gz')
+#     os.makedirs(root, exist_ok=True)
+
+#     if not os.path.exists(mumap_nifti_path):
+#         print("Converting CT HU to mu-map...")
+#         mu = hu_to_mu(ct_path, kvp=kvp)
+#         mu.to_filename(mumap_nifti_path)
+
+#     if not os.path.exists(mumuap_smoothed_nifti_path):
+#         print("Smoothing mu-map...")
+#         mu_smoothed = smooth_image(mu, fwhm_mm=fwhm_mm)
+#         mu_smoothed.to_filename(mumuap_smoothed_nifti_path)
+
+#     if not os.path.exists(mumap_hv_path):
+#         print("Converting mu-map to STIR format...")
+#         mumap_to_stir(mumuap_smoothed_nifti_path, mumap_hv_path, ring_spacing_mm)
+    
+#     if not os.path.exists(output_hs):
+#         print("Calculating ACF sinogram...")
+#         calculate_acf(mumap_hv_path, reference_sinogram, output_hs)
+
+
+# if __name__ == "__main__":
+#     convert_ct_to_acf('ct.nii.gz', 'additive_term_SSRB.hs', 'outs/acf.hs', ring_spacing_mm=3.29114, debug=True)
