@@ -6,17 +6,41 @@
 
 ---
 
-## Overview
+## Table of Contents
 
-PET/CT scanners combine functional PET imaging with anatomical CT. The CT is used to compute an attenuation correction factor (ACF) — a correction for how much the body absorbs the 511 keV photons emitted during PET scanning. While PET tracer doses have dropped significantly with modern scanners, the CT component remains the primary radiation source in a PET/CT exam.
-
-This challenge asks participants to synthesize a pseudo-CT from three radiation-free inputs: non-attenuation-corrected PET (NAC-PET), whole-body MRI, and a 2D topogram (scout X-ray). The predicted CT is then used as a drop-in replacement in the standard reconstruction pipeline, producing an attenuation-corrected PET (ACPET) image without a volumetric CT scan. Eliminating the CT dose is particularly valuable for radiation-sensitive populations such as children and pregnant patients.
-
-The dataset comprises 100 healthy volunteers acquired on a **Siemens Biograph Vision Quadra** (PET/CT) and **MAGNETOM Vida** (MRI), with 75 training cases and 4 validation cases. Both static and dynamic acquisition protocols are included.
+- [Overview](#overview)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Data Format](#data-format)
+- [Baseline](#baseline-srcbaseline)
+- [Reconstruction Pipeline](#reconstruction-pipeline-srcrecon)
+- [Evaluation](#evaluation-srcevaluation)
+- [Submission](#submission)
+- [Tips & FAQ](#tips--faq)
+- [Organizers](#organizers)
 
 ---
 
-## Repository Structure
+## 🧠 Overview
+
+Your algorithm receives the files under `features/` for each subject and must output a predicted CT volume as a NIfTI file in Hounsfield units (HU). Predictions are evaluated two ways:
+
+1. **CT accuracy** — predicted CT is compared directly against the ground-truth CT
+2. **PET accuracy** — predicted CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET (ACPET) image, which is then compared against the ground-truth PET
+
+The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is split as follows:
+
+| Split | Subjects | Contents |
+|-------|----------|----------|
+| `train/` (labeled) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
+| `train/` (unlabeled) | 67 | `features/` + `ct-label/` |
+| `val/` | 4 | `features/` + `recon/` |
+
+Labeled train subjects support closed-loop local evaluation. Unlabeled train subjects provide CT supervision only. Validation subjects have no labels — submit reconstructed PET to Codabench.
+
+---
+
+## 📁 Repository Structure
 
 ```
 src/
@@ -27,7 +51,7 @@ src/
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 **Requirements:** Python 3.12, [uv](https://github.com/astral-sh/uv), Docker
 
@@ -39,60 +63,47 @@ uv sync
 
 ---
 
-## Data Format
-
-Each subject is a directory with four subdirectories:
+## 🗂️ Data Format
 
 ```
-sub-000/
-├── features/           # Inputs to your model
-├── ct-label/           # Ground-truth CT and segmentations
-├── recon/              # Sinogram data for reconstruction
-└── pet-label/          # Ground-truth ACPET and segmentations
+train/
+└── sub-000/
+    ├── features/                          # model inputs (all subjects)
+    │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET
+    │   ├── topogram.nii.gz                # 2D scout X-ray resampled to CT grid
+    │   ├── mri_chunk_0_in_phase.nii.gz    # DIXON MRI bed position 0, in-phase
+    │   ├── mri_chunk_0_out_phase.nii.gz   # DIXON MRI bed position 0, out-of-phase
+    │   ├── mri_chunk_1_in_phase.nii.gz    #   ... (chunks 0–3 for each phase)
+    │   ├── mri_chunk_1_out_phase.nii.gz
+    │   ├── mri_chunk_2_in_phase.nii.gz
+    │   ├── mri_chunk_2_out_phase.nii.gz
+    │   ├── mri_chunk_3_in_phase.nii.gz
+    │   ├── mri_chunk_3_out_phase.nii.gz
+    │   ├── mri_combined_in_phase.nii.gz   # stitched whole-body MRI, in-phase
+    │   ├── mri_combined_out_phase.nii.gz  # stitched whole-body MRI, out-of-phase
+    │   ├── face_seg.nii.gz                # face mask (MRI space)
+    │   └── metadata.json                  # {sex, age, height, weight}
+    ├── ct-label/                          # ground-truth CT (train only)
+    │   ├── ct.nii.gz                      # anonymized CT in HU
+    │   ├── body_seg.nii.gz                # body mask
+    │   ├── organ_seg.nii.gz               # TotalSegmentator organ labels
+    │   └── face_seg.nii.gz                # face mask
+    ├── recon/                             # sinogram data (labeled train + val)
+    │   ├── mult_factors_forSTIR_SSRB.hs/s # multiplicative correction sinogram
+    │   ├── additive_term_SSRB.hs/s        # additive correction sinogram (scatter + randoms)
+    │   ├── prompts_SSRB.hs/s              # prompt (raw) sinogram
+    │   ├── offset.json                    # bed position and gantry offset
+    │   ├── ct_face.nii.gz                 # GT CT face region (for face swap)
+    │   └── face_mask.nii.gz               # face mask
+    └── pet-label/                         # ground-truth PET (labeled train only)
+        ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
+        ├── body_seg.nii.gz                # body mask in PET space
+        └── organ_seg.nii.gz               # organ labels in PET space
 ```
-
-### `features/` — model inputs
-
-| File | Description |
-|------|-------------|
-| `nacpet.nii.gz` | Non-attenuation-corrected PET (NAC-PET) |
-| `topogram.nii.gz` | 2D scout X-ray (topogram) resampled to 3D CT grid |
-| `mri_chunk_*_*.nii.gz` | DIXON MRI chunks (in-phase and out-of-phase) |
-| `mri_combined_*_phase.nii.gz` | Combined whole-body DIXON MRI |
-| `metadata.json` | Demographics: `{sex, age, height, weight}` |
-
-### `ct-label/` — ground-truth CT
-
-| File | Description |
-|------|-------------|
-| `ct.nii.gz` | Anonymized ground-truth CT in Hounsfield units (HU) |
-| `body_seg.nii.gz` | Binary body mask |
-| `organ_seg.nii.gz` | TotalSegmentator organ labels |
-| `face_seg.nii.gz` | Face mask (used for anonymization) |
-
-### `recon/` — reconstruction inputs
-
-| File | Description |
-|------|-------------|
-| `mult_factors_forSTIR_SSRB.hs/.s` | Multiplicative correction sinogram |
-| `additive_term_SSRB.hs/.s` | Additive correction sinogram (scatter + randoms) |
-| `prompts_SSRB.hs/.s` | Prompt (raw) sinogram |
-| `offset.json` | Bed position and gantry offset for origin alignment |
-| `ct_face.nii.gz` | Ground-truth CT face region (for optional face swap) |
-| `face_mask.nii.gz` | Face mask for anonymization |
-
-### `pet-label/` — ground-truth ACPET
-
-| File | Description |
-|------|-------------|
-| `acpet.nii.gz` | Ground-truth CT-attenuation-corrected PET (reference) |
-| `body_seg.nii.gz` | Body mask resampled to PET space |
-| `organ_seg.nii.gz` | Organ labels resampled to PET space |
-| `brain_seg.nii.gz` | SynthSeg brain segmentation |
 
 ---
 
-## Baseline (`src/baseline/`)
+## 📦 Baseline (`src/baseline/`)
 
 A simple patch-based MONAI 3D UNet that predicts pseudo-CT from NAC-PET only. It is provided as a starting-point reference — participants are expected to improve on it by incorporating MRI and topogram inputs.
 
@@ -108,7 +119,7 @@ python src/baseline/model.py data/sub-000/features/ results/sub-000/ct_pred.nii.
 
 ---
 
-## Reconstruction Pipeline (`src/recon/`)
+## ⚙️ Reconstruction Pipeline (`src/recon/`)
 
 Converts a predicted pseudo-CT into a reconstructed ACPET image using [STIR](http://stir.sourceforge.net/) (Software for Tomographic Image Reconstruction). The pipeline:
 
@@ -155,7 +166,7 @@ python src/recon/main.py <recon_dir> <ct.nii.gz> <pet_out.nii.gz> \
 
 ---
 
-## Evaluation (`src/evaluation/`)
+## 📊 Evaluation (`src/evaluation/`)
 
 Five metrics compare predicted PET and CT outputs against the ground truth:
 
@@ -183,13 +194,37 @@ python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> \
 
 ---
 
-## Tips & FAQ
+## 📬 Submission
+
+Wrap your algorithm in a Docker container. The evaluation system will run your container with two mounts:
+
+- `/data/features/` — read-only input directory (contents of `features/` for the subject)
+- `/data/output/` — write directory for your predictions
+
+Your container must write the predicted CT to `/data/output/ct.nii.gz` as a NIfTI file in Hounsfield units (HU), with the same affine and shape as the input CT space.
+
+The exact command used to run your container is:
+
+```bash
+docker run --rm \
+  -v /path/to/sub-XXX/features:/data/features:ro \
+  -v /path/to/output:/data/output \
+  <your-image>
+```
+
+No other files or directories are mounted. Your container must not require network access at inference time.
+
+Submit your image name and tag via Codabench (see [website](https://bic-mac-challenge.github.io/) for registration and submission instructions).
+
+---
+
+## 💡 Tips & FAQ
 
 _Coming soon._
 
 ---
 
-## Organizers
+## 🏛️ Organizers
 
 This challenge is organized by [Rigshospitalet](https://www.rigshospitalet.dk/), [Technical University of Denmark (DTU)](https://www.dtu.dk/), [University of Copenhagen (KU)](https://www.ku.dk/), and [KU Leuven](https://www.kuleuven.be/), with support from [QIM](https://qim.dk/) and [SyneRBI](https://www.synergistic-biomedical-imaging.eu/).
 
