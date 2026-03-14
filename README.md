@@ -33,7 +33,7 @@ The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is sp
 | Split | Subjects | Contents |
 |-------|----------|----------|
 | `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
-| `train/` (no recon) | 67 | `features/` + `ct-label/` |
+| `train/` (no recon) | 68 | `features/` + `ct-label/` |
 | `val/` | 4 | `features/` + `recon/` |
 
 All train subjects have CT labels. The 8 fully-equipped subjects additionally include sinogram data and PET labels, enabling closed-loop local evaluation. Validation subjects have sinogram data but no labels — submit reconstructed PET to Codabench.
@@ -178,8 +178,7 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 | Whole-body SUV MAE | `whole_body_mae` | Mean absolute error in standardised uptake value (SUV = activity × weight / total dose) | Body mask, excluding ±4 cm around liver |
 | Brain Outlier Score | `brain_outlier` | AUC of fraction of brain voxels within relative error thresholds (5%, 10%, 15%) | Brain |
 | Organ Bias (MARE) | `organ_bias` | Mean absolute relative error of mean SUV in 8 organs: brain, liver, spleen, heart, pancreas, muscle, adipose, extremities | TotalSegmentator organ labels |
-| TAC Bias | `tac_bias` | AUC MARE for time-activity curves in aorta + 6 brain regions (4D dynamic PET only) | Aorta + brain regions |
-| CT MAE | `ct_mae` | Mean absolute error in HU between predicted and ground-truth CT | Body mask |
+| CT MAE | `ct_mae` | Mean absolute error of attenuation coefficients (μ at 511 keV) between predicted and ground-truth CT after HU→μ conversion | Body mask, excluding ±4 cm around liver|
 
 **Run all metrics:**
 
@@ -192,7 +191,7 @@ python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> -
 ```bash
 python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> \
   -specific_metric <metric>
-# <metric>: whole_body_mae | brain_outlier | organ_bias | tac_bias | ct_mae
+# <metric>: whole_body_mae | brain_outlier | organ_bias | ct_mae
 ```
 
 ---
