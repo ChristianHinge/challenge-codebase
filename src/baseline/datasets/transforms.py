@@ -3,37 +3,32 @@ from monai.transforms import (
     LoadImaged,
     EnsureChannelFirstd,
     NormalizeIntensityd,
+    ScaleIntensityRanged,
     ConcatItemsd,
-    RandSpatialCropd,
+    RandCropByPosNegLabeld,
     RandFlipd,
     EnsureTyped,
-    MapTransform,
+    Lambdad
 )
 
 import torch
 
 
-class RepeatTopogramZ(MapTransform):
+def repeat_topogram(data):
     """
-    Repeat the topogram slice along the Z axis
-    so it matches the depth of the PET volume.
+    Convert topogram from (1,H,W,1) -> (1,H,W,D)
+    so it matches PET/MRI depth.
     """
 
-    def __call__(self, data):
+    topogram = data["topogram"]
+    depth = data["pet"].shape[-1]
 
-        d = dict(data)
+    if topogram.shape[-1] == 1:
+        topogram = topogram.repeat(1, 1, 1, depth)
 
-        pet = d["pet"]
-        topo = d["topogram"]
+    data["topogram"] = topogram
 
-        target_depth = pet.shape[-1]
-
-        # topo shape: (C,H,W,1)
-        topo = topo.repeat(1, 1, 1, target_depth)
-
-        d["topogram"] = topo
-
-        return d
+    return data
 
 
 def get_train_transforms(patch_size, spacing):
@@ -42,45 +37,55 @@ def get_train_transforms(patch_size, spacing):
 
         [
 
-            LoadImaged(keys=["pet","topogram","mri_in","mri_out","ct"]),
+            LoadImaged(keys=["pet", "topogram", "mri_in", "mri_out", "ct"]),
 
-            EnsureChannelFirstd(keys=["pet","topogram","mri_in","mri_out","ct"]),
+            EnsureChannelFirstd(keys=["pet", "topogram", "mri_in", "mri_out", "ct"]),
 
-            EnsureTyped(keys=["pet","topogram","mri_in","mri_out","ct"]),
+            # repeat topogram depth
+            Lambdad(keys=["topogram"], func=lambda x: x.repeat(1, 1, 1, 531)),
 
-            # repeat scout radiograph along Z
-            RepeatTopogramZ(keys=["topogram"]),
+            # normalize PET + MRI
+            NormalizeIntensityd(keys=["pet", "mri_in", "mri_out"]),
 
-            NormalizeIntensityd(
-                keys=["pet","topogram","mri_in","mri_out"],
-                nonzero=True,
-                channel_wise=True
+            # normalize CT to 0-1 range
+            ScaleIntensityRanged(
+                keys=["ct"],
+                a_min=-1000,
+                a_max=2000,
+                b_min=0.0,
+                b_max=1.0,
+                clip=True,
             ),
 
+            # combine modalities into input tensor
             ConcatItemsd(
-                keys=["pet","topogram","mri_in","mri_out"],
+                keys=["pet", "topogram", "mri_in", "mri_out"],
                 name="input",
             ),
 
-            RandSpatialCropd(
-                keys=["input","ct"],
-                roi_size=patch_size,
-                random_size=False
+            # sample useful patches instead of random air
+            RandCropByPosNegLabeld(
+                keys=["input", "ct"],
+                label_key="ct",
+                spatial_size=patch_size,
+                pos=1,
+                neg=1,
+                num_samples=1,
             ),
 
             RandFlipd(
-                keys=["input","ct"],
+                keys=["input", "ct"],
                 spatial_axis=0,
-                prob=0.5
+                prob=0.5,
             ),
 
             RandFlipd(
-                keys=["input","ct"],
+                keys=["input", "ct"],
                 spatial_axis=1,
-                prob=0.5
+                prob=0.5,
             ),
 
-            EnsureTyped(keys=["input","ct"]),
+            EnsureTyped(keys=["input", "ct"]),
 
         ]
     )
