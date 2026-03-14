@@ -12,7 +12,6 @@ def compute_organ_bias_from_totalseg(
     pred_path,
     gt_path,
     totalseg_path,
-    organ_label_dict,
     json_path,
     epsilon=1e-6,
 ):
@@ -20,6 +19,17 @@ def compute_organ_bias_from_totalseg(
     Compute mean absolute relative error (MARE)
     of SUV-mean across specified organs.
     """
+
+    organ_label_dict = {
+            "brain": 90,
+            "liver": 5,
+            "spleen": 1,
+            "heart": 52,
+            "pancreas": 10,
+            "muscle": 200,
+            "adipose": 201,
+            "extremities": 300,
+        }
 
     with open(json_path, "r") as f:
         meta = json.load(f)
@@ -44,7 +54,7 @@ def compute_organ_bias_from_totalseg(
         pred_mean = np.mean(pred[mask])
         gt_mean = np.mean(gt[mask])
 
-        mare = np.abs(pred_mean - gt_mean) / (np.abs(gt_mean) + epsilon)
+        mare = 100*np.abs(pred_mean - gt_mean) / (np.abs(gt_mean) + epsilon)
         mare_values.append(mare)
 
     if not mare_values:
