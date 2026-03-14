@@ -35,7 +35,8 @@ def main():
         cfg["spacing"],
     )
 
-    # cache dataset for faster loading
+    print("Loading dataset...")
+
     dataset = CacheDataset(
         data=data,
         transform=transforms,
@@ -48,8 +49,8 @@ def main():
         batch_size=cfg["batch_size"],
         shuffle=True,
         num_workers=cfg["num_workers"],
-        pin_memory=True,
-        persistent_workers=True,
+        pin_memory=False,            # FIX
+        persistent_workers=False,    # FIX
     )
 
     model = build_model().to(device)
@@ -61,7 +62,7 @@ def main():
 
     loss_fn = torch.nn.L1Loss()
 
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.amp.GradScaler("cuda")
 
     os.makedirs("outputs/checkpoints", exist_ok=True)
 
@@ -80,8 +81,7 @@ def main():
 
             optimizer.zero_grad()
 
-            # mixed precision
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast("cuda"):
 
                 pred = model(x)
                 loss = loss_fn(pred, y)
