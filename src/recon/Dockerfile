@@ -15,10 +15,15 @@ RUN apt-get install libinsighttoolkit5-dev -y
 RUN apt install nlohmann-json3-dev -y
 
 # Clone and build STIR
-RUN git clone https://github.com/z-k-li/STIR
+RUN git clone https://github.com/UCL/STIR && cd STIR && git checkout 46da4ef2b8b38487b08f5aa48c6e38b568a584cc
+
+
 RUN pip install numpy
-RUN mkdir build && cd build && cmake ../STIR -DBUILD_SWIG_PYTHON=ON -DSTIR_BUILD_EXECUTABLES=ON -DPython_EXECUTABLE=/usr/bin/python3 && make -j 8
-RUN pip install nibabel
+RUN mkdir build && cd build && cmake ../STIR -DBUILD_SWIG_PYTHON=ON -DSTIR_BUILD_EXECUTABLES=ON -DPython_EXECUTABLE=/usr/bin/python3 && make -j 8 && make install
+RUN pip install nibabel scipy
+
+
+
 
 # Copy recon folder
 WORKDIR /recon
@@ -31,6 +36,7 @@ COPY . .
 #   -v /host/intermediates:/data/intermediates
 
 # Set OVERWRITE=1 at runtime to enable overwriting existing files
+ENV PYTHONPATH="/usr/local/python"
 ENV OVERWRITE=""
 
 CMD python3 main.py \
