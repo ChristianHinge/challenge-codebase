@@ -41,7 +41,6 @@ def main():
         transform=transforms,
         cache_rate=1.0,
         num_workers=0,
-        copy_cache=False,
     )
 
     loader = DataLoader(
