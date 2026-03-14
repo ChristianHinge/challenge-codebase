@@ -15,7 +15,6 @@ torch.backends.cudnn.benchmark = True
 
 
 def load_config():
-
     with open("configs/config.yaml") as f:
         return yaml.safe_load(f)
 
@@ -25,7 +24,6 @@ def main():
     cfg = load_config()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
     print("Using device:", device)
 
     data = get_dataset(cfg["data_dir"])
@@ -41,16 +39,14 @@ def main():
         data=data,
         transform=transforms,
         cache_rate=1.0,
-        num_workers=cfg["num_workers"],
+        num_workers=0,   # IMPORTANT
     )
 
     loader = DataLoader(
         dataset,
         batch_size=cfg["batch_size"],
         shuffle=True,
-        num_workers=cfg["num_workers"],
-        pin_memory=False,            # FIX
-        persistent_workers=False,    # FIX
+        num_workers=0,   # IMPORTANT
     )
 
     model = build_model().to(device)
@@ -82,7 +78,6 @@ def main():
             optimizer.zero_grad()
 
             with torch.amp.autocast("cuda"):
-
                 pred = model(x)
                 loss = loss_fn(pred, y)
 
