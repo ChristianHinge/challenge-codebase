@@ -176,7 +176,7 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 | Brain Outlier Score | `brain_outlier` | AUC of fraction of brain voxels within relative error thresholds (5%, 10%, 15%) | Brain |
 | Organ Bias (MARE) | `organ_bias` | Mean absolute relative error of mean SUV in 8 organs: brain, liver, spleen, heart, pancreas, muscle, adipose, extremities | TotalSegmentator organ labels |
 | TAC Bias | `tac_bias` | AUC MARE for time-activity curves in aorta + 6 brain regions (4D dynamic PET only) | Aorta + brain regions |
-| CT MAE | `ct_mae` | Mean absolute error in HU between predicted and ground-truth CT | Body mask |
+| CT MAE | `ct_mae` | Mean absolute error of attenuation coefficients (μ at 511 keV) between predicted and ground-truth CT after HU→μ conversion | Body mask, excluding ±4 cm around liver|
 
 **Run all metrics:**
 

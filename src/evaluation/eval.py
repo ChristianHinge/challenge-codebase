@@ -21,7 +21,7 @@ from metrics import (
     compute_brain_outlier_score,
     compute_organ_bias_from_totalseg,
     compute_tac_bias,
-    compute_whole_body_ct_mae,
+    compute_whole_body_mu_mae,
 )
 
 
@@ -161,10 +161,11 @@ def main():
 
     if args.all or args.specific_metric == "ct_mae":
 
-        results["CT MAE"] = compute_whole_body_ct_mae(
+        results["CT MAE"] = compute_whole_body_mu_mae(
             pred_ct_path=args.pred_ct,
             gt_ct_path=gt_ct,
             body_mask_path=body_seg_ct,
+            liver_mask_path=organ_seg_pet,
         )
 
     # =====================================================
