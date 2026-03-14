@@ -20,7 +20,8 @@ def compute_k_value(pred_path, gt_path, brain_mask_path,
 
     pred = nib.load(pred_path).get_fdata()
     gt = nib.load(gt_path).get_fdata()
-    brain_mask = nib.load(brain_mask_path).get_fdata() > 0
+    seg = nib.load(brain_mask_path).get_fdata()
+    brain_mask = seg == 90
 
     # If 4D, use first frame (static metric)
     if pred.ndim == 4:

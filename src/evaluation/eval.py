@@ -20,7 +20,6 @@ from metrics import (
     compute_whole_body_suv_mae,
     compute_brain_outlier_score,
     compute_organ_bias_from_totalseg,
-    compute_tac_bias,
     compute_whole_body_mu_mae,
 )
 
@@ -32,19 +31,22 @@ def main():
     )
 
     parser.add_argument(
-        "subject_path",
+        "--subject_path",
+        required=True,
         help="Path to subject directory"
     )
 
     parser.add_argument(
-        "pred_pet",
+        "--pred_pet",
+        required=True,
         help="Path to predicted PET NIfTI"
     )
 
     parser.add_argument(
-        "pred_ct",
+        "--pred_ct",
+        required=True,
         help="Path to predicted CT NIfTI"
-    )
+)
 
     parser.add_argument(
         "-all",
@@ -58,7 +60,6 @@ def main():
             "whole_body_mae",
             "brain_outlier",
             "organ_bias",
-            "tac_bias",
             "ct_mae",
         ],
         help="Run specific metric only"
@@ -71,12 +72,11 @@ def main():
     pet_label_dir = os.path.join(subject_path, "pet-label")
     features_dir  = os.path.join(subject_path, "features")
 
-    gt_pet        = os.path.join(pet_label_dir, "acpet.nii.gz")
+    gt_pet        = os.path.join(pet_label_dir, "pet.nii.gz")
     gt_ct         = os.path.join(ct_label_dir,  "ct.nii.gz")
     body_seg_pet  = os.path.join(pet_label_dir, "body_seg.nii.gz")
     organ_seg_pet = os.path.join(pet_label_dir, "organ_seg.nii.gz")
     body_seg_ct   = os.path.join(ct_label_dir,  "body_seg.nii.gz")
-    synthseg      = os.path.join(pet_label_dir, "brain_seg.nii.gz")
     meta_json     = os.path.join(features_dir,  "metadata.json")
 
     results = {}
@@ -104,7 +104,7 @@ def main():
         results["Brain Outlier Score"] = compute_brain_outlier_score(
             pred_paths=[args.pred_pet],
             gt_paths=[gt_pet],
-            brain_mask_paths=[synthseg]
+            totalseg_paths=[organ_seg_pet],
         )
 
     # =====================================================
@@ -113,50 +113,17 @@ def main():
 
     if args.all or args.specific_metric == "organ_bias":
 
-        organ_labels = {
-            "brain": 90,
-            "liver": 5,
-            "spleen": 1,
-            "heart": 52,
-            "pancreas": 10,
-            "muscle": 200,
-            "adipose": 201,
-            "extremities": 300,
-        }
-
+        
         results["Organ Bias"] = compute_organ_bias_from_totalseg(
             pred_path=args.pred_pet,
             gt_path=gt_pet,
             totalseg_path=organ_seg_pet,
-            organ_label_dict=organ_labels,
             json_path=meta_json,
         )
 
+    
     # =====================================================
-    # 4. TAC Bias (Dynamic Only)
-    # =====================================================
-
-    if args.all or args.specific_metric == "tac_bias":
-
-        pet_data = nib.load(args.pred_pet).get_fdata()
-
-        if pet_data.ndim != 4:
-            print("TAC Bias skipped: PET is not dynamic (4D).")
-        else:
-            frame_durations = np.array([4.0] * pet_data.shape[-1])
-
-            results["TAC Bias"] = compute_tac_bias(
-                pred_path=args.pred_pet,
-                gt_path=gt_pet,
-                totalseg_path=organ_seg_pet,
-                synthseg_path=synthseg,
-                frame_durations=frame_durations,
-                aorta_label=52,
-                brain_label_ids=[3, 42, 10, 49, 8, 47]
-            )
-
-    # =====================================================
-    # 5. CT MAE
+    # 4. CT MAE
     # =====================================================
 
     if args.all or args.specific_metric == "ct_mae":
@@ -180,7 +147,10 @@ def main():
         print("No metric selected.")
     else:
         for name, value in results.items():
-            print(f"{name:<25}: {value:.6f}")
+            if name == "Organ Bias":
+                print(f"{name:<25}: {value:.6f}%")
+            else:
+                print(f"{name:<25}: {value:.6f}")
 
     print("====================================================\n")
 
