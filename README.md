@@ -149,12 +149,15 @@ docker run --rm \
 
 The reconstructed PET is written to `/data/output/pet.nii.gz`.
 
-Set `OVERWRITE=1` to re-run over existing outputs:
+Optionally mount a local directory to `/data/intermediates` to persist intermediate files (mu-map, ACF sinogram, etc.). When mounted, the pipeline resumes from any existing intermediates rather than recomputing them; set `OVERWRITE=1` to forcefully restart from scratch instead.
 
 ```bash
-docker run --rm -e OVERWRITE=1 \
+docker run --rm \
   -v /path/to/sub-000/recon:/data/recon \
-  ...
+  -v /path/to/ct_pred.nii.gz:/data/ct/ct.nii.gz \
+  -v /path/to/output:/data/output \
+  -v /path/to/intermediates:/data/intermediates \
+  ghcr.io/bic-mac-challenge/recon:latest
 ```
 
 ### Option 2: Direct Python (requires local STIR)
