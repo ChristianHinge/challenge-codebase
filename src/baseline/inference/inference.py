@@ -11,6 +11,7 @@ from monai.transforms import (
     NormalizeIntensityd,
     ConcatItemsd,
     EnsureTyped,
+    Lambdad,
 )
 
 from models.unet import build_model
@@ -50,6 +51,12 @@ transforms = Compose(
     EnsureChannelFirstd(keys=["pet","topogram","mri_in","mri_out"]),
 
     NormalizeIntensityd(keys=["pet","mri_in","mri_out"]),
+
+    # Expand topogram depth from 1 -> 531
+    Lambdad(
+        keys=["topogram"],
+        func=lambda x: x.repeat(1,1,1,531)
+    ),
 
     ConcatItemsd(
         keys=["pet","topogram","mri_in","mri_out"],
@@ -102,7 +109,7 @@ for name in tqdm(SUBJECTS):
 
     pred = pred.cpu().numpy()[0,0]
 
-    # convert back to HU
+    # convert normalized output back to HU
     pred = pred * 3000 - 1000
 
     ref = nib.load(str(sub/"features/nacpet.nii.gz"))
