@@ -23,7 +23,7 @@ from models.unet import build_model
 
 DATA_ROOT = Path("/depict/users/hinge/shared/bic-mac-data/hf_dataset/train")
 MODEL_PATH = "outputs/checkpoints/model_epoch_99.pth"
-OUTPUT_DIR = Path("outputs/pseudo_ct")
+OUTPUT_DIR = Path("outputs/inf_pseudo_ct")
 
 PATCH_SIZE = (128,128,128)
 SW_BATCH = 2
