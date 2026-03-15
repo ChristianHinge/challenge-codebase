@@ -27,6 +27,7 @@ OUTPUT_DIR = Path("outputs/pseudo_ct")
 
 PATCH_SIZE = (128,128,128)
 SW_BATCH = 2
+OVERLAP = 0.75
 
 # SUBJECTS YOU WANT
 SUBJECTS = [
@@ -52,10 +53,10 @@ transforms = Compose(
 
     NormalizeIntensityd(keys=["pet","mri_in","mri_out"]),
 
-    # Expand topogram depth from 1 -> 531
+    # expand topogram depth dynamically
     Lambdad(
         keys=["topogram"],
-        func=lambda x: x.repeat(1,1,1,531)
+        func=lambda x: x.repeat(1,1,1,x.shape[-1]) if x.shape[-1] > 1 else x.repeat(1,1,1,531)
     ),
 
     ConcatItemsd(
@@ -73,6 +74,8 @@ transforms = Compose(
 # -----------------------------
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+print("Using device:", device)
 
 model = build_model().to(device)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
@@ -104,7 +107,9 @@ for name in tqdm(SUBJECTS):
             x,
             PATCH_SIZE,
             SW_BATCH,
-            model
+            model,
+            overlap=OVERLAP,
+            mode="gaussian"
         )
 
     pred = pred.cpu().numpy()[0,0]
