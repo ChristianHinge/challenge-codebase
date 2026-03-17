@@ -5,10 +5,9 @@ from monai.transforms import (
     NormalizeIntensityd,
     ScaleIntensityRanged,
     ConcatItemsd,
-    RandCropByPosNegLabeld,
+    RandSpatialCropd,
     RandFlipd,
     EnsureTyped,
-    Lambdad
 )
 
 
@@ -17,21 +16,16 @@ def get_train_transforms(patch_size, spacing):
     transforms = Compose(
         [
 
-            LoadImaged(keys=["pet", "topogram", "mri_in", "mri_out", "ct"]),
+            LoadImaged(keys=["pet", "ct"]),
 
-            EnsureChannelFirstd(keys=["pet", "topogram", "mri_in", "mri_out", "ct"]),
+            EnsureChannelFirstd(keys=["pet", "ct"]),
 
-            # expand topogram depth
-            Lambdad(keys=["topogram"], func=lambda x: x.repeat(1,1,1,531)),
-
-            # normalize PET and MRI
             NormalizeIntensityd(
-                keys=["pet","mri_in","mri_out"],
+                keys=["pet"],
                 nonzero=True,
                 channel_wise=True
             ),
 
-            # normalize CT
             ScaleIntensityRanged(
                 keys=["ct"],
                 a_min=-1000,
@@ -41,20 +35,16 @@ def get_train_transforms(patch_size, spacing):
                 clip=True,
             ),
 
-            # combine modalities
+            # now input is just PET
             ConcatItemsd(
-                keys=["pet","topogram","mri_in","mri_out"],
+                keys=["pet"],
                 name="input"
             ),
 
-            # patch sampling
-            RandCropByPosNegLabeld(
+            RandSpatialCropd(
                 keys=["input","ct"],
-                label_key="ct",
-                spatial_size=patch_size,
-                pos=1,
-                neg=1,
-                num_samples=1
+                roi_size=patch_size,
+                random_size=False
             ),
 
             RandFlipd(

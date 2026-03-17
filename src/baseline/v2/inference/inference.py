@@ -50,20 +50,18 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 transforms = Compose(
 [
-    LoadImaged(keys=["pet","topogram","mri_in","mri_out"]),
+    LoadImaged(keys=["pet"]),
 
-    EnsureChannelFirstd(keys=["pet","topogram","mri_in","mri_out"]),
-
-    Lambdad(keys=["topogram"], func=lambda x: x.repeat(1,1,1,531)),
+    EnsureChannelFirstd(keys=["pet"]),
 
     NormalizeIntensityd(
-        keys=["pet","mri_in","mri_out"],
+        keys=["pet"],
         nonzero=True,
         channel_wise=True
     ),
 
     ConcatItemsd(
-        keys=["pet","topogram","mri_in","mri_out"],
+        keys=["pet"],
         name="input"
     ),
 
@@ -99,9 +97,6 @@ for name in tqdm(SUBJECTS):
 
     data = {
         "pet": sub/"features/nacpet.nii.gz",
-        "topogram": sub/"features/topogram.nii.gz",
-        "mri_in": sub/"features/mri_combined_in_phase.nii.gz",
-        "mri_out": sub/"features/mri_combined_out_phase.nii.gz",
     }
 
     data = transforms(data)
