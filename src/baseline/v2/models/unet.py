@@ -147,6 +147,6 @@ class UNet3D(nn.Module):
 def build_model():
 
     return UNet3D(
-        in_channels=4,
+        in_channels=1,  # only PET as input
         out_channels=1
     )
