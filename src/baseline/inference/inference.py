@@ -23,13 +23,12 @@ from models.unet import build_model
 
 DATA_ROOT = Path("/depict/users/hinge/shared/bic-mac-data/hf_dataset/train")
 MODEL_PATH = "outputs/checkpoints/model_epoch_99.pth"
-OUTPUT_DIR = Path("outputs/inf_pseudo_ct")
+OUTPUT_DIR = Path("outputs/pseudo_ct")
 
 PATCH_SIZE = (128,128,128)
 SW_BATCH = 2
 OVERLAP = 0.75
 
-# SUBJECTS YOU WANT
 SUBJECTS = [
     "sub-068",
     "sub-074",
@@ -42,7 +41,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # -----------------------------
-# PREPROCESS
+# PREPROCESS (match training)
 # -----------------------------
 
 transforms = Compose(
@@ -51,14 +50,13 @@ transforms = Compose(
 
     EnsureChannelFirstd(keys=["pet","topogram","mri_in","mri_out"]),
 
+    # repeat topogram depth (same as training)
+    Lambdad(keys=["topogram"], func=lambda x: x.repeat(1,1,1,531)),
+
+    # normalize PET + MRI (same as training)
     NormalizeIntensityd(keys=["pet","mri_in","mri_out"]),
 
-    # expand topogram depth dynamically
-    Lambdad(
-        keys=["topogram"],
-        func=lambda x: x.repeat(1,1,1,x.shape[-1]) if x.shape[-1] > 1 else x.repeat(1,1,1,531)
-    ),
-
+    # combine modalities
     ConcatItemsd(
         keys=["pet","topogram","mri_in","mri_out"],
         name="input"
@@ -74,7 +72,6 @@ transforms = Compose(
 # -----------------------------
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
 print("Using device:", device)
 
 model = build_model().to(device)
@@ -109,12 +106,12 @@ for name in tqdm(SUBJECTS):
             SW_BATCH,
             model,
             overlap=OVERLAP,
-            mode="gaussian"
+            mode="gaussian",
         )
 
     pred = pred.cpu().numpy()[0,0]
 
-    # convert normalized output back to HU
+    # convert normalized prediction back to HU
     pred = pred * 3000 - 1000
 
     ref = nib.load(str(sub/"features/nacpet.nii.gz"))
