@@ -1,0 +1,17 @@
+data_dir: /depict/users/hinge/shared/bic-mac-data/hf_dataset/train
+
+batch_size: 2
+num_workers: 0
+
+epochs: 250
+learning_rate: 0.0003
+
+patch_size: [192,192,192]
+
+spacing: [2.0,2.0,2.0]
+
+input_modalities:
+  - nacpet
+  - topogram
+  - mri_combined_in_phase
+  - mri_combined_out_phase
