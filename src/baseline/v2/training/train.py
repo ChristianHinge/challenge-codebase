@@ -77,11 +77,11 @@ def main():
         dataset,
         batch_size=cfg["batch_size"],
         shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True
+        num_workers=0,
+        pin_memory=False,
+        persistent_workers=False
     )
-
+    
     model = build_model().to(device)
 
     optimizer = torch.optim.AdamW(
