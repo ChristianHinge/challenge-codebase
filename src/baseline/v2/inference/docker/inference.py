@@ -14,7 +14,7 @@ from monai.transforms import (
 )
 
 from models.unet import build_model
-
+import time 
 
 # -----------------------------
 # ARGUMENTS
@@ -24,6 +24,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--input", required=True, help="Path to nacpet.nii.gz")
 parser.add_argument("--output", required=True, help="Path to save pseudo CT")
 args = parser.parse_args()
+
+total_start = time.time()
+
 
 INPUT_PATH = Path(args.input)
 OUTPUT_PATH = Path(args.output)
@@ -100,3 +103,6 @@ nib.save(
 )
 
 print("Saved:", OUTPUT_PATH)
+
+total_end = time.time()
+print(f"Total runtime: {total_end - total_start:.2f} seconds")
