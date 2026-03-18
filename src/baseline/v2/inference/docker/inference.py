@@ -1,4 +1,7 @@
 import argparse
+import time
+import warnings
+
 import torch
 import nibabel as nib
 from pathlib import Path
@@ -14,7 +17,8 @@ from monai.transforms import (
 )
 
 from models.unet import build_model
-import time 
+
+warnings.filterwarnings("ignore")
 
 # -----------------------------
 # ARGUMENTS
