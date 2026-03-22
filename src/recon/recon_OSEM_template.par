@@ -36,4 +36,11 @@ number of subsets:= 5
 number of subiterations:= 20
 save estimates at subiteration intervals:= 20
 
+post-filter type := Separable Gaussian
+Separable Gaussian Filter Parameters :=
+  x-dir filter FWHM (in mm):= 4.0
+  y-dir filter FWHM (in mm):= 4.0
+  z-dir filter FWHM (in mm):= 4.0
+END Separable Gaussian Filter Parameters :=
+
 END :=
