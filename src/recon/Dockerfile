@@ -22,7 +22,7 @@ RUN mkdir /build && cd /build \
  && make -j$(nproc) \
  && make install
 
-RUN pip install --no-cache-dir nibabel scipy
+RUN pip install --no-cache-dir nibabel scipy tqdm
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM ubuntu:22.04
@@ -37,7 +37,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libboost-iostreams1.74.0 \
     libboost-date-time1.74.0 \
     libhdf5-103 \
+    libhdf5-cpp-103 \
     libfftw3-double3 \
+    libinsighttoolkit5.2 \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy STIR install (executables, libs, Python bindings) + pip packages
@@ -49,10 +51,11 @@ COPY . .
 
 ENV PYTHONPATH="/usr/local/python"
 ENV OVERWRITE=""
+ENV VERBOSE=""
 
 CMD python3 main.py \
     /data/recon \
     /data/ct/ct.nii.gz \
-    /data/output/pet.nii.gz \
-    --intermediates_dir /data/intermediates \
-    ${OVERWRITE:+--overwrite}
+    /data/output \
+    ${OVERWRITE:+--overwrite} \
+    ${VERBOSE:+--verbose}

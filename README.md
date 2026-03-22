@@ -89,14 +89,14 @@ train/
     │   ├── organ_seg.nii.gz               # TotalSegmentator organ labels
     │   └── face_seg.nii.gz                # face mask
     ├── recon/                             # sinogram data (labeled train + val)
-    │   ├── mult_factors_forSTIR_SSRB.hs/s # multiplicative correction sinogram
-    │   ├── additive_term_SSRB.hs/s        # additive correction sinogram (scatter + randoms)
-    │   ├── prompts_SSRB.hs/s              # prompt (raw) sinogram
+    │   ├── mult_nac_rd85.hs/.s            # multiplicative correction sinogram
+    │   ├── add_nac_rd85.hs/.s             # additive correction sinogram (scatter + randoms)
+    │   ├── prompts_rd85.hs/.s             # prompt (raw) sinogram
     │   ├── offset.json                    # bed position and gantry offset
-    │   ├── ct_face.nii.gz                 # GT CT face region (for face swap)
-    │   └── face_mask.nii.gz               # face mask
+    │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (for swap-back)
+    │   └── face_and_bed_mask.nii.gz       # face + scanner bed mask
     └── pet-label/                         # ground-truth PET (labeled train only)
-        ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
+        ├── acpet.nii.gz                   # CT-attenuation-corrected PET (reference)
         ├── body_seg.nii.gz                # body mask in PET space
         └── organ_seg.nii.gz               # organ labels in PET space
 ```
@@ -124,14 +124,15 @@ python src/baseline/model.py data/sub-000/features/ results/sub-000/ct_pred.nii.
 Converts a predicted pseudo-CT into a reconstructed ACPET image using [STIR](http://stir.sourceforge.net/) (Software for Tomographic Image Reconstruction). The pipeline:
 
 1. Validates CT shape, affine, and HU range
-2. Converts HU → linear attenuation coefficients (μ-map) at 511 keV using the Carney et al. (2006) bilinear model
-3. Smooths the μ-map (4mm FWHM Gaussian)
-4. Resamples the μ-map to STIR sinogram format
-5. Computes the ACF (attenuation correction factor) sinogram
-6. Applies ACF to multiplicative/additive sinograms
-7. Reconstructs using OSEM (ordered subsets expectation maximisation)
-8. Applies 4mm post-reconstruction filter
-9. Converts to NIfTI with correct bed/gantry offset origin
+2. Swaps face and scanner bed region back from ground-truth CT (to avoid evaluating face/bed prediction)
+3. Converts HU → linear attenuation coefficients (μ-map) at 511 keV using the Carney et al. (2006) bilinear model
+4. Smooths the μ-map (4mm FWHM Gaussian)
+5. Resamples the μ-map to STIR format (ring spacing 3.29114 mm)
+6. Computes the ACF (attenuation correction factor) sinogram
+7. Applies ACF to the additive sinogram
+8. Applies ACF to the multiplicative sinogram
+9. Reconstructs using OSEM (ordered subsets expectation maximisation, with post-filter)
+10. Converts to NIfTI with correct bed/gantry offset origin
 
 ### Option 1: Docker (recommended)
 
@@ -147,25 +148,28 @@ docker run --rm \
   ghcr.io/bic-mac-challenge/recon:latest
 ```
 
-The reconstructed PET is written to `/data/output/pet.nii.gz`.
+The reconstructed PET is written to `/data/output/pet.nii.gz`. Intermediate files (mu-map, ACF sinogram, etc.) are written to `/data/output/intermediates/` and a full debug log to `/data/output/intermediates/recon.log`.
 
-Optionally mount a local directory to `/data/intermediates` to persist intermediate files (mu-map, ACF sinogram, etc.). When mounted, the pipeline resumes from any existing intermediates rather than recomputing them; set `OVERWRITE=1` to forcefully restart from scratch instead.
+The pipeline resumes from any existing intermediates automatically; set `OVERWRITE=1` to forcefully restart from scratch:
 
 ```bash
 docker run --rm \
+  -e OVERWRITE=1 \
   -v /path/to/sub-000/recon:/data/recon \
   -v /path/to/ct_pred.nii.gz:/data/ct/ct.nii.gz \
   -v /path/to/output:/data/output \
-  -v /path/to/intermediates:/data/intermediates \
   ghcr.io/bic-mac-challenge/recon:latest
 ```
+
+Set `VERBOSE=1` to stream STIR subprocess output to the terminal in addition to the log file.
 
 ### Option 2: Direct Python (requires local STIR)
 
 ```bash
-python src/recon/main.py <recon_dir> <ct.nii.gz> <pet_out.nii.gz> \
-  [--overwrite] [--intermediates_dir <dir>]
+python src/recon/main.py <recon_dir> <ct.nii.gz> <output_dir> [-w] [-v]
 ```
+
+`pet.nii.gz` and `intermediates/` are written inside `output_dir`. Use `-w`/`--overwrite` to rerun from scratch and `-v`/`--verbose` to stream STIR output to the terminal.
 
 ---
 
