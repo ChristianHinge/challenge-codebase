@@ -81,22 +81,22 @@ train/
     │   ├── mri_chunk_3_out_phase.nii.gz
     │   ├── mri_combined_in_phase.nii.gz   # stitched whole-body MRI, in-phase
     │   ├── mri_combined_out_phase.nii.gz  # stitched whole-body MRI, out-of-phase
-    │   ├── face_seg.nii.gz                # face mask (MRI space)
+    │   ├── mri_face_mask.nii.gz           # binary face mask in MRI space
     │   └── metadata.json                  # {sex, age, height, weight}
     ├── ct-label/                          # ground-truth CT (train only)
     │   ├── ct.nii.gz                      # anonymized CT in HU
-    │   ├── body_seg.nii.gz                # body mask
+    │   ├── body_seg.nii.gz                # multi-class body segmentation
     │   ├── organ_seg.nii.gz               # TotalSegmentator organ labels
-    │   └── face_seg.nii.gz                # face mask
+    │   └── prediction_mask.nii.gz         # binary mask: 1 where predictions are evaluated (excludes face + scanner bed)
     ├── recon/                             # sinogram data (labeled train + val)
     │   ├── mult_nac_rd85.hs/.s            # multiplicative correction sinogram
     │   ├── add_nac_rd85.hs/.s             # additive correction sinogram (scatter + randoms)
     │   ├── prompts_rd85.hs/.s             # prompt (raw) sinogram
     │   ├── offset.json                    # bed position and gantry offset
     │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (for swap-back)
-    │   └── face_and_bed_mask.nii.gz       # face + scanner bed mask
+    │   └── face_and_bed_mask.nii.gz       # binary face + scanner bed mask
     └── pet-label/                         # ground-truth PET (labeled train only)
-        ├── acpet.nii.gz                   # CT-attenuation-corrected PET (reference)
+        ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
         ├── body_seg.nii.gz                # body mask in PET space
         └── organ_seg.nii.gz               # organ labels in PET space
 ```
@@ -213,12 +213,22 @@ The exact command used to run your container is:
 
 ```bash
 docker run --rm \
+  --memory 128g \
+  --network none \
   -v /path/to/sub-XXX/features:/data/features:ro \
   -v /path/to/output:/data/output \
   <your-image>
 ```
 
-No other files or directories are mounted. Your container must not require network access at inference time.
+**Constraints enforced at evaluation time:**
+
+| Resource | Limit |
+|----------|-------|
+| RAM | 128 GB |
+| Wall-clock time | 5 minutes |
+| Network access | None (`--network none`) |
+
+No other files or directories are mounted. Make sure all model weights and dependencies are baked into your image — no downloads at inference time.
 
 Submit your image name and tag via Codabench (see [website](https://bic-mac-challenge.github.io/) for registration and submission instructions).
 

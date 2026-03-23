@@ -23,11 +23,6 @@ def compute_k_value(pred_path, gt_path, brain_mask_path,
     seg = nib.load(brain_mask_path).get_fdata()
     brain_mask = seg == 90
 
-    # If 4D, use first frame (static metric)
-    if pred.ndim == 4:
-        pred = pred[..., 0]
-        gt = gt[..., 0]
-
     valid_mask = brain_mask & (np.abs(gt) > epsilon)
     num_valid = np.sum(valid_mask)
 
@@ -39,20 +34,14 @@ def compute_k_value(pred_path, gt_path, brain_mask_path,
     return np.sum(relative_error[valid_mask] < threshold) / num_valid
 
 
-def compute_auc_of_K(k_values, num_points=1000):
+def compute_auc_of_K(k_values):
     """
     Compute AUC of K(x):
         K(x) = fraction of cases where k > x
+
+    Analytically, AUC = mean(k_values), since ∫₀¹ I(k > x) dx = k for k ∈ [0, 1].
     """
-
-    x_values = np.linspace(0, 1, num_points)
-    K_values = []
-
-    for x in x_values:
-        Kx = np.sum(np.array(k_values) > x) / len(k_values)
-        K_values.append(Kx)
-
-    return np.trapezoid(K_values, x_values)
+    return np.mean(k_values)
 
 
 # =========================================================

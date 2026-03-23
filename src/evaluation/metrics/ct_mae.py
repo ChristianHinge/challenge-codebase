@@ -23,11 +23,14 @@ def hu_to_mu(ct_path, kvp=120):
     return nib.Nifti1Image(mu, ct.affine, ct.header)
 
 
+LIVER_LABEL = 5
+
+
 def compute_whole_body_mu_mae(
     pred_ct_path,
     gt_ct_path,
     body_mask_path,
-    liver_mask_path,
+    organ_seg_path,
     exclusion_cm=4.0,
 ):
     """
@@ -43,7 +46,7 @@ def compute_whole_body_mu_mae(
     gt = hu_to_mu(gt_ct_path).get_fdata()
 
     body_mask = nib.load(body_mask_path).get_fdata() > 0
-    liver_mask = nib.load(liver_mask_path).get_fdata() > 0
+    liver_mask = nib.load(organ_seg_path).get_fdata() == LIVER_LABEL
 
     # Slice thickness
     slice_thickness_mm = nib.load(pred_ct_path).header.get_zooms()[2]

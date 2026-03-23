@@ -2,7 +2,6 @@
 Organ bias metric (SUV-mean MARE).
 """
 
-import json
 import numpy as np
 import nibabel as nib
 from .suv_utils import compute_suv_factor
@@ -12,7 +11,7 @@ def compute_organ_bias_from_totalseg(
     pred_path,
     gt_path,
     totalseg_path,
-    json_path,
+    body_mask_path,
     epsilon=1e-6,
 ):
     """
@@ -31,13 +30,8 @@ def compute_organ_bias_from_totalseg(
             "extremities": 300,
         }
 
-    with open(json_path, "r") as f:
-        meta = json.load(f)
-
-    weight_kg = meta["weight"]
-
     gt_img = nib.load(gt_path)
-    suv_factor = compute_suv_factor(weight_kg, gt_img)
+    suv_factor = compute_suv_factor(gt_img, nib.load(body_mask_path))
 
     pred = nib.load(pred_path).get_fdata() * suv_factor
     gt = gt_img.get_fdata() * suv_factor
