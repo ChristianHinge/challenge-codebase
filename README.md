@@ -26,17 +26,19 @@
 Your algorithm receives the files under `features/` for each subject and must output a predicted CT volume as a NIfTI file in Hounsfield units (HU). Predictions are evaluated two ways:
 
 1. **CT accuracy** — predicted CT is compared directly against the ground-truth CT
-2. **PET accuracy** — predicted CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET (ACPET) image, which is then compared against the ground-truth PET
+2. **PET accuracy** — predicted CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET image, which is then compared against the ground-truth PET
 
-The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is split as follows:
+Note that no PET reconstruction experience is needed to participate in the challenge, and the main purpose of the reconstruction is to enable clinically meaningful metrics. 
+
+The dataset comprises 99 subject-unique cases, with 20 reserved for testing and the remaining 79 available on huggingface and split as follows:
 
 | Split | Subjects | Contents |
 |-------|----------|----------|
 | `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
-| `train/` (no recon) | 68 | `features/` + `ct-label/` |
+| `train/` (no recon) | 67 | `features/` + `ct-label/` |
 | `val/` | 4 | `features/` + `recon/` |
 
-All train subjects have CT labels. The 8 fully-equipped subjects additionally include sinogram data and PET labels, enabling closed-loop local evaluation. Validation subjects have sinogram data but no labels — submit reconstructed PET to Codabench.
+All train cases have CT labels, but due to the size of the sinograms, only 8 include the recon and pet-label folders needed for closed loop reconstruction. Validation subjects have sinogram data but no labels — submit predicted CTs and reconstructed PET to Codabench to get live leaderboard metrics throughout the challenge.
 
 ---
 
@@ -64,38 +66,34 @@ uv sync
 ---
 
 ## 🗂️ Data Format
-
+All images are resampled to the label CT image (tensor size: 512x512x531, voxel size 1.52x1.52,2.00mm^3) and structured in four folders per case. 
+- `features/` All the files you can use as input to your generative CT model at inference.
+- 
 ```
+
+
 train/
 └── sub-000/
-    ├── features/                          # model inputs (all subjects)
-    │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET
-    │   ├── topogram.nii.gz                # 2D scout X-ray resampled to CT grid
-    │   ├── mri_chunk_0_in_phase.nii.gz    # DIXON MRI bed position 0, in-phase
-    │   ├── mri_chunk_0_out_phase.nii.gz   # DIXON MRI bed position 0, out-of-phase
-    │   ├── mri_chunk_1_in_phase.nii.gz    #   ... (chunks 0–3 for each phase)
-    │   ├── mri_chunk_1_out_phase.nii.gz
-    │   ├── mri_chunk_2_in_phase.nii.gz
-    │   ├── mri_chunk_2_out_phase.nii.gz
-    │   ├── mri_chunk_3_in_phase.nii.gz
-    │   ├── mri_chunk_3_out_phase.nii.gz
-    │   ├── mri_combined_in_phase.nii.gz   # stitched whole-body MRI, in-phase
-    │   ├── mri_combined_out_phase.nii.gz  # stitched whole-body MRI, out-of-phase
-    │   ├── mri_face_mask.nii.gz           # binary face mask in MRI space
+    ├── features/                          # generative model inputs
+    │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET. 
+    │   ├── topogram.nii.gz                # 2D scout X-ray
+    │   ├── mri_chunk_{0-3}_{in/out}_phase.nii.gz    # DIXON MRI bed position (0-3), in-phase and out-phase
+    │   ├── mri_combined_{in/out}_phase.nii.gz  # stitched whole-body MRI, out-of-phase
+    │   ├── mri_face_mask.nii.gz           # binary anonymization mask
     │   └── metadata.json                  # {sex, age, height, weight}
-    ├── ct-label/                          # ground-truth CT (train only)
-    │   ├── ct.nii.gz                      # anonymized CT in HU
-    │   ├── body_seg.nii.gz                # multi-class body segmentation
-    │   ├── organ_seg.nii.gz               # TotalSegmentator organ labels
-    │   └── prediction_mask.nii.gz         # binary mask: 1 where predictions are evaluated (excludes face + scanner bed)
-    ├── recon/                             # sinogram data (labeled train + val)
-    │   ├── mult_nac_rd85.hs/.s            # multiplicative correction sinogram
-    │   ├── add_nac_rd85.hs/.s             # additive correction sinogram (scatter + randoms)
-    │   ├── prompts_rd85.hs/.s             # prompt (raw) sinogram
+    ├── ct-label/                          # ground-truth CT
+    │   ├── ct.nii.gz                      # in HU this is what your algorithm should predict
+    │   ├── body_seg.nii.gz                # TotalSegmentator body seg.
+    │   ├── organ_seg.nii.gz               # TotalSegmentator organ seg.
+    │   └── prediction_mask.nii.gz         # The generative model should focus only on these voxels (face + scanner are excluded)
+    ├── recon/                             # sinogram data
+    │   ├── mult_nac_rd85.hs/.s            # multiplicative sinogram
+    │   ├── add_nac_rd85.hs/.s             # additive sinogram
+    │   ├── prompts_rd85.hs/.s             # raw sinogram
     │   ├── offset.json                    # bed position and gantry offset
-    │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (for swap-back)
+    │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (automatically superimposed on your prediction before reconstruction)
     │   └── face_and_bed_mask.nii.gz       # binary face + scanner bed mask
-    └── pet-label/                         # ground-truth PET (labeled train only)
+    └── pet-label/                         # ground-truth PET
         ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
         ├── body_seg.nii.gz                # body mask in PET space
         └── organ_seg.nii.gz               # organ labels in PET space
