@@ -9,6 +9,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Documentation](#documentation)
 - [Repository Structure](#repository-structure)
 - [Getting Started](#getting-started)
 - [Data Format](#data-format)
@@ -37,6 +38,16 @@ The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is sp
 | `val/` | 4 | `features/` + `recon/` |
 
 All train subjects have CT labels. The 8 fully-equipped subjects additionally include sinogram data and PET labels, enabling closed-loop local evaluation. Validation subjects have sinogram data but no labels — submit reconstructed PET to Codabench.
+
+---
+
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [PET Background](docs/pet-background.md) | PET physics and attenuation correction — start here if you're new to PET |
+| [Submission Guide](docs/submission-guide.md) | Validation, dry-run, and final submission phases explained |
+| [Docker Packaging](docs/docker-packaging.md) | How to containerize your model, with baseline as a worked example |
 
 ---
 
@@ -202,35 +213,17 @@ python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> \
 
 ## 📬 Submission
 
-Wrap your algorithm in a Docker container. The evaluation system will run your container with two mounts:
+There are three submission phases — **Validation** (NIfTI upload to Codabench), **Dry Run** (container sanity check), and **Final Test** (container + full recon + evaluation). Validation and Dry Run run concurrently during the pre-evaluation period (May 15 – Jun 15).
 
-- `/data/features/` — read-only input directory (contents of `features/` for the subject)
-- `/data/output/` — write directory for your predictions
+See [docs/submission-guide.md](docs/submission-guide.md) for full instructions on each phase.
 
-Your container must write the predicted CT to `/data/output/ct.nii.gz` as a NIfTI file in Hounsfield units (HU), with the same affine and shape as the input CT space.
+For phases requiring a Docker container, your image must:
 
-The exact command used to run your container is:
+- Read from `/data/features/` (read-only mount)
+- Write `ct.nii.gz` to `/data/output/`
+- Run within 5 minutes, with 128 GB RAM and no network access
 
-```bash
-docker run --rm \
-  --memory 128g \
-  --network none \
-  -v /path/to/sub-XXX/features:/data/features:ro \
-  -v /path/to/output:/data/output \
-  <your-image>
-```
-
-**Constraints enforced at evaluation time:**
-
-| Resource | Limit |
-|----------|-------|
-| RAM | 128 GB |
-| Wall-clock time | 5 minutes |
-| Network access | None (`--network none`) |
-
-No other files or directories are mounted. Make sure all model weights and dependencies are baked into your image — no downloads at inference time.
-
-Submit your image name and tag via Codabench (see [website](https://bic-mac-challenge.github.io/) for registration and submission instructions).
+See [docs/docker-packaging.md](docs/docker-packaging.md) for a step-by-step guide to building and testing your container, with the baseline as a worked example.
 
 ---
 
