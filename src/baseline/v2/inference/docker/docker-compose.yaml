@@ -1,0 +1,3 @@
+services:
+  recon:
+    image: ghcr.io/bic-mac-challenge/inference:latest
