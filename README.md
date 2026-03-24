@@ -116,6 +116,54 @@ python src/baseline/model.py data/sub-000/features/ results/sub-000/ct_pred.nii.
 ```
 
 ---
+## 🐳 Inference Docker (`src/baseline-inference/`)
+
+To simplify reproducibility and submission, the baseline model is also provided as a **fully self-contained Docker image**. This container wraps the same baseline UNet model and runs inference directly from the command line.
+
+This Docker image should be considered the **official baseline submission** — participants are expected to improve upon it.
+
+### 📦 Pull Image
+
+```bash
+docker pull ghcr.io/bic-mac-challenge/inference:latest
+```
+
+### ▶️ Run Inference
+
+```bash
+docker run --rm \
+  --gpus all \
+  -v /absolute/path/to/data:/data \
+  ghcr.io/bic-mac-challenge/inference:latest \
+  --input /data/sub-XXX/features/nacpet.nii.gz \
+  --output /data/sub-XXX/pseudo_ct.nii.gz
+```
+
+### 📁 Input
+
+* Expects NAC-PET input (`nacpet.nii.gz`)
+* Path must be mounted into the container (e.g., `/data`)
+
+### 📁 Output
+
+* Writes predicted CT (in HU) to the specified output path
+
+### ⚙️ Notes
+
+* All model weights and dependencies are **baked into the container**
+* No internet access is required at runtime
+* Designed to be **fully compliant with challenge submission requirements**
+* Serves as a **reference baseline for participants**
+
+### 🧠 Relation to Baseline Code
+
+This container directly wraps the implementation in:
+
+```
+src/baseline/
+```
+
+with identical preprocessing, model architecture, and inference logic.
 
 ## ⚙️ Reconstruction Pipeline (`src/recon/`)
 
