@@ -1,9 +1,13 @@
-import numpy as np
+import logging
 import re
+import numpy as np
 import shutil
 import subprocess
 import stir
 import os
+from tqdm import tqdm
+
+log = logging.getLogger('recon')
 
 def apply_acf_to_sinogram(sino_path, sino_acf_path, out_sino_path):
     sino_path_s = sino_path.replace(".hs", ".s")
@@ -38,8 +42,8 @@ def stir_pet_to_nifti(vertical_bed_start,horizontal_bed_start,gantry_offset,pet_
     stir.ITKOutputFileFormat().write_to_file(output_path, image)
     
 
-def run_reconstruction(recon_template,filter_template,add_sino_path, mult_sino_path, prompts_sino_path, out_image_path):
-    out_image_base = out_image_path.replace(".hv","")
+def run_reconstruction(recon_template, add_sino_path, mult_sino_path, prompts_sino_path, out_image_path, verbose=False):
+    out_image_base = out_image_path.replace("_20.hv", "")
 
     with open(recon_template,"r") as f:
         recon_cmd = f.read().strip()
@@ -48,12 +52,23 @@ def run_reconstruction(recon_template,filter_template,add_sino_path, mult_sino_p
     recon_cmd = recon_cmd.replace("ADD_SINO", add_sino_path)
     recon_cmd = recon_cmd.replace("MULT_SINO", mult_sino_path)
     recon_cmd = recon_cmd.replace("OUT_FILE_PREFIX", out_image_base)
-    
+
     recon_file = os.path.join(os.path.dirname(out_image_path), 'recon.par')
     with open(recon_file, "w") as f:
         f.write(recon_cmd)
-    
-    subprocess.run(['OSMAPOSL', recon_file], check=True)
-    subprocess.run(['postfilter', out_image_path, out_image_base + "_20.hv", filter_template], check=True)
+
+    subiteration_re = re.compile(r'OSEM subiteration #(\d+) completed')
+
+    with subprocess.Popen(['stdbuf', '-oL', 'OSMAPOSL', recon_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True) as proc:
+        with tqdm(total=20, desc='OSEM subiteration', unit='subit', leave=False) as pbar:
+            for line in proc.stdout:
+                line = line.rstrip()
+                log.debug(line)
+                m = subiteration_re.search(line)
+                if m:
+                    pbar.update(int(m.group(1)) - pbar.n)
+        proc.wait()
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, proc.args)
 
 

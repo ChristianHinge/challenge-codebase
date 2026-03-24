@@ -22,4 +22,4 @@ def compute_brain_outlier_score(pred_paths, gt_paths, totalseg_paths):
 
         auc_scores.append(compute_auc_of_K(k_values))
 
-    return np.mean(auc_scores)
+    return 1-np.mean(auc_scores)

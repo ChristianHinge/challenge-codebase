@@ -1,11 +1,14 @@
 import stir
 import os, subprocess
+import logging
+
+log = logging.getLogger('recon')
 import nibabel as nib
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
 
-def validate_ct(pred_ct_path, ct_face_path, hu_min_expected=-1024, hu_min_tolerance=20):
+def validate_ct(pred_ct_path, ct_face_and_bed_path, hu_min_expected=-1024, hu_min_tolerance=20):
     """
     Validate the predicted CT against the ground-truth CT.
 
@@ -17,7 +20,7 @@ def validate_ct(pred_ct_path, ct_face_path, hu_min_expected=-1024, hu_min_tolera
     ----------
     pred_ct_path : str
         Path to the predicted CT NIfTI file.
-    ct_face_path : str
+    ct_face_and_bed_path : str
         Path to the ground-truth CT NIfTI file.
     hu_min_expected : float
         Expected minimum HU value (air/background), typically -1024.
@@ -25,7 +28,7 @@ def validate_ct(pred_ct_path, ct_face_path, hu_min_expected=-1024, hu_min_tolera
         How far the actual minimum may deviate from hu_min_expected before warning.
     """
     pred_img = nib.load(pred_ct_path)
-    gt_img = nib.load(ct_face_path)
+    gt_img = nib.load(ct_face_and_bed_path)
 
     if pred_img.shape != gt_img.shape:
         raise ValueError(
@@ -42,14 +45,14 @@ def validate_ct(pred_ct_path, ct_face_path, hu_min_expected=-1024, hu_min_tolera
     pred_data = pred_img.get_fdata(dtype=np.float32)
     hu_min = pred_data.min()
     if hu_min > hu_min_expected + hu_min_tolerance:
-        print(
-            f"WARNING: Predicted CT minimum HU is {hu_min:.1f}. "
+        log.warning(
+            f"Predicted CT minimum HU is {hu_min:.1f}. "
             f"Expected around {hu_min_expected} (air). "
             "The image may not be in correct HU units."
         )
 
 
-def swap_face_from_gt(pred_ct_path, ct_face_path, face_mask_path, output_path=None):
+def swap_face_from_gt(pred_ct_path, ct_face_and_bed_path, face_mask_path, output_path=None):
     """
     Replace the face region of a predicted CT with the ground-truth CT face.
 
@@ -60,7 +63,7 @@ def swap_face_from_gt(pred_ct_path, ct_face_path, face_mask_path, output_path=No
     ----------
     pred_ct_path : str
         Path to the predicted CT NIfTI file.
-    ct_face_path : str
+    ct_face_and_bed_path : str
         Path to the ground-truth CT NIfTI file (ct.nii.gz).
     face_mask_path : str
         Path to the binary face mask NIfTI file.
@@ -73,7 +76,7 @@ def swap_face_from_gt(pred_ct_path, ct_face_path, face_mask_path, output_path=No
         CT with the face region swapped in from the ground truth.
     """
     pred_img = nib.load(pred_ct_path)
-    gt_img = nib.load(ct_face_path)
+    gt_img = nib.load(ct_face_and_bed_path)
     mask_img = nib.load(face_mask_path)
 
     pred_data = pred_img.get_fdata(dtype=np.float32)
@@ -93,7 +96,7 @@ def swap_face_from_gt(pred_ct_path, ct_face_path, face_mask_path, output_path=No
 
     if output_path is not None:
         result_img.to_filename(output_path)
-        print(f"Face-swapped CT saved to {output_path}")
+        log.debug(f"Face- and bed-swapped CT saved to {output_path}")
 
     return result_img
 
@@ -121,8 +124,17 @@ def smooth_image(img, fwhm_mm=4.0):
 def save_stir_to_nifti(stir_img, output_path):
     stir.ITKOutputFileFormat().write_to_file(output_path, stir_img)
 
-def calculate_acf(mumap_hv, reference_sinogram, output_hs):
-    subprocess.run(['calculate_attenuation_coefficients', '--ACF', output_hs, mumap_hv, reference_sinogram], check=True)
+def calculate_acf(mumap_hv, reference_sinogram, output_hs, forwardprojector_par):
+    with subprocess.Popen(
+        ['stdbuf', '-oL', 'calculate_attenuation_coefficients', '--ACF', output_hs, mumap_hv, reference_sinogram, forwardprojector_par],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    ) as proc:
+        for line in proc.stdout:
+            line = line.rstrip()
+            log.debug(line)
+        proc.wait()
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, proc.args)
     
 
 def mumap_to_stir(input_path, output_path, ring_spacing_mm=3.29114):
@@ -153,7 +165,7 @@ def mumap_to_stir(input_path, output_path, ring_spacing_mm=3.29114):
     img_z.set_origin(stir.FloatCartesianCoordinate3D(snapped_z, 0.0, 0.0))
 
     stir.InterfileOutputFileFormat().write_to_file(output_path, img_z)
-    print(f"z-origin snapped: {o2.z():.4f} -> {snapped_z:.4f} mm, plane_sep={plane_sep:.5f} mm")
+    log.debug(f"z-origin snapped: {o2.z():.4f} -> {snapped_z:.4f} mm, plane_sep={plane_sep:.5f} mm")
 
 
 # def convert_ct_to_acf(ct_path, reference_sinogram, output_hs, ring_spacing_mm=3.29114,fwhm_mm=4.0,kvp=120):

@@ -7,19 +7,19 @@ Provides SUV normalization factor computation from patient weight and GT PET.
 import numpy as np
 
 
-def compute_suv_factor(weight_kg, gt_pet_img):
+def compute_suv_factor(gt_pet_img, body_mask_img):
     """
-    Compute SUV normalization factor from patient weight and GT PET image.
+    Compute SUV normalization factor from GT PET and body mask.
 
-    Total dose is estimated by summing GT PET voxels multiplied by voxel volume,
-    avoiding the need for InjectedRadioactivity in metadata.
+    Total activity is estimated by summing GT PET voxels × voxel volume.
+    Body weight is estimated from body mask volume (density ≈ 1.0 g/mL → kg).
 
     Parameters
     ----------
-    weight_kg : float
-        Patient weight in kg.
     gt_pet_img : nibabel image
         Ground-truth PET NIfTI image (any activity unit).
+    body_mask_img : nibabel image
+        Body segmentation mask (binary or label > 0).
 
     Returns
     -------
@@ -30,6 +30,12 @@ def compute_suv_factor(weight_kg, gt_pet_img):
     zooms = gt_pet_img.header.get_zooms()
     voxel_vol_mL = np.prod(zooms[:3]) / 1000.0  # mm^3 → mL
     total_activity = np.sum(gt_pet_img.get_fdata()) * voxel_vol_mL
+
+    body_zooms = body_mask_img.header.get_zooms()
+    body_voxel_vol_mL = np.prod(body_zooms[:3]) / 1000.0
+    body_volume_mL = np.sum(body_mask_img.get_fdata() > 0) * body_voxel_vol_mL
+    weight_kg = body_volume_mL / 1000.0  # mL → kg (density ≈ 1.0 g/mL)
+
     return weight_kg / total_activity
 
 

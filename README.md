@@ -26,17 +26,19 @@
 Your algorithm receives the files under `features/` for each subject and must output a predicted CT volume as a NIfTI file in Hounsfield units (HU). Predictions are evaluated two ways:
 
 1. **CT accuracy** — predicted CT is compared directly against the ground-truth CT
-2. **PET accuracy** — predicted CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET (ACPET) image, which is then compared against the ground-truth PET
+2. **PET accuracy** — predicted CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET image, which is then compared against the ground-truth PET
 
-The dataset (100 subjects, Siemens Biograph Vision Quadra + MAGNETOM Vida) is split as follows:
+Note that no PET reconstruction experience is needed to participate in the challenge, and the main purpose of the reconstruction is to enable clinically meaningful metrics. 
+
+The dataset comprises 99 subject-unique cases, with 20 reserved for testing and the remaining 79 available on huggingface and split as follows:
 
 | Split | Subjects | Contents |
 |-------|----------|----------|
 | `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
-| `train/` (no recon) | 68 | `features/` + `ct-label/` |
+| `train/` (no recon) | 67 | `features/` + `ct-label/` |
 | `val/` | 4 | `features/` + `recon/` |
 
-All train subjects have CT labels. The 8 fully-equipped subjects additionally include sinogram data and PET labels, enabling closed-loop local evaluation. Validation subjects have sinogram data but no labels — submit reconstructed PET to Codabench.
+All train cases have CT labels, but due to the size of the sinograms, only 8 include the recon and pet-label folders needed for closed loop reconstruction. Validation subjects have sinogram data but no labels — submit predicted CTs and reconstructed PET to Codabench to get live leaderboard metrics throughout the challenge.
 
 ---
 
@@ -64,38 +66,34 @@ uv sync
 ---
 
 ## 🗂️ Data Format
-
+All images are resampled to the label CT image (tensor size: 512x512x531, voxel size 1.52x1.52,2.00mm^3) and structured in four folders per case. 
+- `features/` All the files you can use as input to your generative CT model at inference.
+- 
 ```
+
+
 train/
 └── sub-000/
-    ├── features/                          # model inputs (all subjects)
-    │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET
-    │   ├── topogram.nii.gz                # 2D scout X-ray resampled to CT grid
-    │   ├── mri_chunk_0_in_phase.nii.gz    # DIXON MRI bed position 0, in-phase
-    │   ├── mri_chunk_0_out_phase.nii.gz   # DIXON MRI bed position 0, out-of-phase
-    │   ├── mri_chunk_1_in_phase.nii.gz    #   ... (chunks 0–3 for each phase)
-    │   ├── mri_chunk_1_out_phase.nii.gz
-    │   ├── mri_chunk_2_in_phase.nii.gz
-    │   ├── mri_chunk_2_out_phase.nii.gz
-    │   ├── mri_chunk_3_in_phase.nii.gz
-    │   ├── mri_chunk_3_out_phase.nii.gz
-    │   ├── mri_combined_in_phase.nii.gz   # stitched whole-body MRI, in-phase
-    │   ├── mri_combined_out_phase.nii.gz  # stitched whole-body MRI, out-of-phase
-    │   ├── face_seg.nii.gz                # face mask (MRI space)
+    ├── features/                          # generative model inputs
+    │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET. 
+    │   ├── topogram.nii.gz                # 2D scout X-ray
+    │   ├── mri_chunk_{0-3}_{in/out}_phase.nii.gz    # DIXON MRI bed position (0-3), in-phase and out-phase
+    │   ├── mri_combined_{in/out}_phase.nii.gz  # stitched whole-body MRI, out-of-phase
+    │   ├── mri_face_mask.nii.gz           # binary anonymization mask
     │   └── metadata.json                  # {sex, age, height, weight}
-    ├── ct-label/                          # ground-truth CT (train only)
-    │   ├── ct.nii.gz                      # anonymized CT in HU
-    │   ├── body_seg.nii.gz                # body mask
-    │   ├── organ_seg.nii.gz               # TotalSegmentator organ labels
-    │   └── face_seg.nii.gz                # face mask
-    ├── recon/                             # sinogram data (labeled train + val)
-    │   ├── mult_factors_forSTIR_SSRB.hs/s # multiplicative correction sinogram
-    │   ├── additive_term_SSRB.hs/s        # additive correction sinogram (scatter + randoms)
-    │   ├── prompts_SSRB.hs/s              # prompt (raw) sinogram
+    ├── ct-label/                          # ground-truth CT
+    │   ├── ct.nii.gz                      # in HU this is what your algorithm should predict
+    │   ├── body_seg.nii.gz                # TotalSegmentator body seg.
+    │   ├── organ_seg.nii.gz               # TotalSegmentator organ seg.
+    │   └── prediction_mask.nii.gz         # The generative model should focus only on these voxels (face + scanner are excluded)
+    ├── recon/                             # sinogram data
+    │   ├── mult_nac_rd85.hs/.s            # multiplicative sinogram
+    │   ├── add_nac_rd85.hs/.s             # additive sinogram
+    │   ├── prompts_rd85.hs/.s             # raw sinogram
     │   ├── offset.json                    # bed position and gantry offset
-    │   ├── ct_face.nii.gz                 # GT CT face region (for face swap)
-    │   └── face_mask.nii.gz               # face mask
-    └── pet-label/                         # ground-truth PET (labeled train only)
+    │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (automatically superimposed on your prediction before reconstruction)
+    │   └── face_and_bed_mask.nii.gz       # binary face + scanner bed mask
+    └── pet-label/                         # ground-truth PET
         ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
         ├── body_seg.nii.gz                # body mask in PET space
         └── organ_seg.nii.gz               # organ labels in PET space
@@ -124,14 +122,15 @@ python src/baseline/model.py data/sub-000/features/ results/sub-000/ct_pred.nii.
 Converts a predicted pseudo-CT into a reconstructed ACPET image using [STIR](http://stir.sourceforge.net/) (Software for Tomographic Image Reconstruction). The pipeline:
 
 1. Validates CT shape, affine, and HU range
-2. Converts HU → linear attenuation coefficients (μ-map) at 511 keV using the Carney et al. (2006) bilinear model
-3. Smooths the μ-map (4mm FWHM Gaussian)
-4. Resamples the μ-map to STIR sinogram format
-5. Computes the ACF (attenuation correction factor) sinogram
-6. Applies ACF to multiplicative/additive sinograms
-7. Reconstructs using OSEM (ordered subsets expectation maximisation)
-8. Applies 4mm post-reconstruction filter
-9. Converts to NIfTI with correct bed/gantry offset origin
+2. Swaps face and scanner bed region back from ground-truth CT (to avoid evaluating face/bed prediction)
+3. Converts HU → linear attenuation coefficients (μ-map) at 511 keV using the Carney et al. (2006) bilinear model
+4. Smooths the μ-map (4mm FWHM Gaussian)
+5. Resamples the μ-map to STIR format (ring spacing 3.29114 mm)
+6. Computes the ACF (attenuation correction factor) sinogram
+7. Applies ACF to the additive sinogram
+8. Applies ACF to the multiplicative sinogram
+9. Reconstructs using OSEM (ordered subsets expectation maximisation, with post-filter)
+10. Converts to NIfTI with correct bed/gantry offset origin
 
 ### Option 1: Docker (recommended)
 
@@ -147,25 +146,28 @@ docker run --rm \
   ghcr.io/bic-mac-challenge/recon:latest
 ```
 
-The reconstructed PET is written to `/data/output/pet.nii.gz`.
+The reconstructed PET is written to `/data/output/pet.nii.gz`. Intermediate files (mu-map, ACF sinogram, etc.) are written to `/data/output/intermediates/` and a full debug log to `/data/output/intermediates/recon.log`.
 
-Optionally mount a local directory to `/data/intermediates` to persist intermediate files (mu-map, ACF sinogram, etc.). When mounted, the pipeline resumes from any existing intermediates rather than recomputing them; set `OVERWRITE=1` to forcefully restart from scratch instead.
+The pipeline resumes from any existing intermediates automatically; set `OVERWRITE=1` to forcefully restart from scratch:
 
 ```bash
 docker run --rm \
+  -e OVERWRITE=1 \
   -v /path/to/sub-000/recon:/data/recon \
   -v /path/to/ct_pred.nii.gz:/data/ct/ct.nii.gz \
   -v /path/to/output:/data/output \
-  -v /path/to/intermediates:/data/intermediates \
   ghcr.io/bic-mac-challenge/recon:latest
 ```
+
+Set `VERBOSE=1` to stream STIR subprocess output to the terminal in addition to the log file.
 
 ### Option 2: Direct Python (requires local STIR)
 
 ```bash
-python src/recon/main.py <recon_dir> <ct.nii.gz> <pet_out.nii.gz> \
-  [--overwrite] [--intermediates_dir <dir>]
+python src/recon/main.py <recon_dir> <ct.nii.gz> <output_dir> [-w] [-v]
 ```
+
+`pet.nii.gz` and `intermediates/` are written inside `output_dir`. Use `-w`/`--overwrite` to rerun from scratch and `-v`/`--verbose` to stream STIR output to the terminal.
 
 ---
 
@@ -209,12 +211,22 @@ The exact command used to run your container is:
 
 ```bash
 docker run --rm \
+  --memory 128g \
+  --network none \
   -v /path/to/sub-XXX/features:/data/features:ro \
   -v /path/to/output:/data/output \
   <your-image>
 ```
 
-No other files or directories are mounted. Your container must not require network access at inference time.
+**Constraints enforced at evaluation time:**
+
+| Resource | Limit |
+|----------|-------|
+| RAM | 128 GB |
+| Wall-clock time | 5 minutes |
+| Network access | None (`--network none`) |
+
+No other files or directories are mounted. Make sure all model weights and dependencies are baked into your image — no downloads at inference time.
 
 Submit your image name and tag via Codabench (see [website](https://bic-mac-challenge.github.io/) for registration and submission instructions).
 
