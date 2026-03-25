@@ -30,7 +30,7 @@ from .eval_case import evaluate_case
 from .metrics import compute_brain_outlier_score
 
 
-def eval_dataset(dataset_path, pred_dir, subjects=None):
+def evaluate_dataset(dataset_path, pred_dir, subjects=None):
     """
     Evaluate predictions across multiple subjects.
 
@@ -129,7 +129,7 @@ def main():
     )
     args = parser.parse_args()
 
-    eval_dataset(args.dataset_path, args.pred_dir, args.subjects)
+    evaluate_dataset(args.dataset_path, args.pred_dir, args.subjects)
 
 
 if __name__ == "__main__":

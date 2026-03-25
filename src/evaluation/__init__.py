@@ -11,7 +11,7 @@ Metrics:
 - TAC bias
 """
 
-from .eval_dataset import eval_dataset
+from .eval_dataset import evaluate_dataset
 from .eval_case import evaluate_case
 from .metrics import (
     compute_whole_body_suv_mae,
