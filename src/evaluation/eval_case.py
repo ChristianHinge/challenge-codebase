@@ -22,7 +22,7 @@ from metrics import (
 )
 
 
-def evaluate_subject(subject_path, pred_pet_path=None, pred_ct_path=None):
+def evaluate_case(subject_path, pred_pet_path=None, pred_ct_path=None):
     """
     Run metrics for a single subject.
 
@@ -103,7 +103,7 @@ def main():
     if args.pred_pet is None and args.pred_ct is None:
         parser.error("At least one of --pred_pet or --pred_ct must be provided.")
 
-    results = evaluate_subject(args.subject_path, args.pred_pet, args.pred_ct)
+    results = evaluate_case(args.subject_path, args.pred_pet, args.pred_ct)
 
     print("\n================ Evaluation Results ================")
     print(f"Subject: {os.path.basename(args.subject_path)}")

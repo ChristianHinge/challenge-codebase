@@ -3,6 +3,9 @@ import os
 
 
 def get_case_features(features_dir):
+    """Return all available model inputs for a case: NAC-PET, topogram, combined and chunked
+    DIXON MRI (in/out-phase), MRI face mask, and metadata (sex, age, height, weight).
+    These are everything a participant model may use to predict the pseudo-CT."""
     paths = {
         "nacpet":                  os.path.join(features_dir, "nacpet.nii.gz"),
         "topogram":                os.path.join(features_dir, "topogram.nii.gz"),
@@ -18,6 +21,8 @@ def get_case_features(features_dir):
 
 
 def get_case_ct_labels(ct_label_dir):
+    """Return label paths for a case. The target to predict is `ct` (Hounsfield Units),
+    along with body/organ segmentations and a prediction mask."""
     return {
         "ct":               os.path.join(ct_label_dir, "ct.nii.gz"),
         "body_seg":         os.path.join(ct_label_dir, "body_seg.nii.gz"),
@@ -27,6 +32,7 @@ def get_case_ct_labels(ct_label_dir):
 
 
 def get_dataset(data_dir):
+    """Build a list of cases from a directory of subjects, each combining features and CT labels."""
     cases = []
     for sub in sorted(os.listdir(data_dir)):
         case_dir = os.path.join(data_dir, sub)

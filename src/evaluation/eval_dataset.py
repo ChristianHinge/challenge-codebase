@@ -26,11 +26,11 @@ import os
 
 import numpy as np
 
-from eval import evaluate_subject
+from eval_case import evaluate_case
 from metrics import compute_brain_outlier_score
 
 
-def evaluate(dataset_path, pred_dir, subjects=None):
+def eval_dataset(dataset_path, pred_dir, subjects=None):
     """
     Evaluate predictions across multiple subjects.
 
@@ -70,7 +70,7 @@ def evaluate(dataset_path, pred_dir, subjects=None):
         pred_pet     = os.path.join(pred_dir, subject_id, "pet.nii.gz")
         pred_ct      = os.path.join(pred_dir, subject_id, "ct.nii.gz")
 
-        results = evaluate_subject(subject_path, pred_pet, pred_ct)
+        results = evaluate_case(subject_path, pred_pet, pred_ct)
         per_subject[subject_id] = results
 
         print(f"  {subject_id}")
@@ -129,7 +129,7 @@ def main():
     )
     args = parser.parse_args()
 
-    evaluate(args.dataset_path, args.pred_dir, args.subjects)
+    eval_dataset(args.dataset_path, args.pred_dir, args.subjects)
 
 
 if __name__ == "__main__":
