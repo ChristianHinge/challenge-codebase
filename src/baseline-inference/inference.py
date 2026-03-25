@@ -45,7 +45,7 @@ OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 MODEL_PATH = "weights/best_model.pth"
 PATCH_SIZE = (192,192,192)
 SW_BATCH = 2
-OVERLAP = 0.75
+OVERLAP = 0.5
 
 
 # -----------------------------
@@ -92,6 +92,7 @@ with torch.no_grad():
         model,
         overlap=OVERLAP,
         mode="gaussian",
+        progress=True
     )
 
 pred = pred.cpu().numpy()[0,0]

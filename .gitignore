@@ -1,7 +1,9 @@
 .old/
 conversion/
 CLAUDE.md
-
+outputs/
+*.nii.gz
+v3/
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python
 
