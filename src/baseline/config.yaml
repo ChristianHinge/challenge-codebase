@@ -1,7 +1,7 @@
-data_dir: /home/hinge_local/bic-mac-data/train
-
+data_dir: /data/bic-mac-data/train
+cache_dir: /data/bic-mac-cache 
 batch_size: 1 #batch_size is actually 2, since monai samples two patches per volume
-num_workers: 8
+num_workers: 2
 
 epochs: 250
 learning_rate: 0.0003

@@ -4,7 +4,7 @@ import yaml
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
-from monai.data import Dataset, DataLoader
+from monai.data import Dataset, DataLoader, CacheDataset, PersistentDataset
 from tqdm import tqdm
 
 from dataset import get_dataset
@@ -41,11 +41,18 @@ def main():
         cfg["patch_size"],
     )
 
-    print("Preparing dataset cache...")
-
-    dataset = Dataset(
+    print("Preparing dataset ...")
+    dataset = PersistentDataset(
         data=data,
         transform=transforms,
+        cache_dir=cfg["cache_dir"]
+    )
+
+    print("Caching dataset...")
+    dataset = CacheDataset(
+        data=dataset,
+        cache_rate=1.0,
+        num_workers=8,
     )
 
     loader = DataLoader(
@@ -81,6 +88,8 @@ def main():
     best_loss = float("inf")
 
     loss_history = []
+
+    print("Starting training...")
 
     for epoch in range(cfg["epochs"]):
 

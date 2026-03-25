@@ -26,8 +26,8 @@ import os
 
 import numpy as np
 
-from eval_case import evaluate_case
-from metrics import compute_brain_outlier_score
+from .eval_case import evaluate_case
+from .metrics import compute_brain_outlier_score
 
 
 def eval_dataset(dataset_path, pred_dir, subjects=None):

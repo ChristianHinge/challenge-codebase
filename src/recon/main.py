@@ -203,17 +203,23 @@ Expected recon_dir contents:
     recon_template       = os.path.join(_recon_dir, "recon_OSEM_template.par")
     acf_forwardprojector = os.path.join(_recon_dir, "acf_forwardprojector.par")
 
-    reconstruction_pipeline(
-        output_dir=output_dir,
-        ct_path=args.ct,
-        ct_face_and_bed_path=ct_face_and_bed_path,
-        face_and_bed_mask_path=face_and_bed_mask_path,
-        add_sino_path=add_sino_path,
-        mult_sino_path=mult_sino_path,
-        prompts_sino_path=prompts_sino_path,
-        offset_json_path=offset_json_path,
-        recon_template=recon_template,
-        acf_forwardprojector=acf_forwardprojector,
-        overwrite=args.overwrite,
-        verbose=args.verbose,
-    )
+    log_path = os.path.join(output_dir, "intermediates", "recon.log")
+    try:
+        reconstruction_pipeline(
+            output_dir=output_dir,
+            ct_path=args.ct,
+            ct_face_and_bed_path=ct_face_and_bed_path,
+            face_and_bed_mask_path=face_and_bed_mask_path,
+            add_sino_path=add_sino_path,
+            mult_sino_path=mult_sino_path,
+            prompts_sino_path=prompts_sino_path,
+            offset_json_path=offset_json_path,
+            recon_template=recon_template,
+            acf_forwardprojector=acf_forwardprojector,
+            overwrite=args.overwrite,
+            verbose=args.verbose,
+        )
+    except Exception:
+        if not args.verbose:
+            print(f"\nReconstruction failed. Check {log_path} for details, or rerun with -v/--verbose for more output.", flush=True)
+        raise

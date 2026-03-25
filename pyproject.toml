@@ -8,3 +8,6 @@ dependencies = [
     "nibabel>=5.3.3",
     "tqdm>=4.67.3",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]

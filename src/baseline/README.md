@@ -14,22 +14,19 @@ Despite MRI and topogram being available, this baseline uses only NAC-PET to kee
 
 ## Inference
 
-Build and run with Docker:
+The baseline model has already been pretrained
+
+Run with Docker:
 
 ```bash
-docker build -t bic-mac-baseline .
-timeout 5m docker run --rm --gpus 1 \
-  --memory 120g \
+docker run ghcr.io/bic-mac-challenge/baseline \
+ --memory 120g \
   -v /path/to/sub-XXX/features:/data/features:ro \
   -v /path/to/output:/data/output \
   bic-mac-baseline
 ```
 
-The predicted CT is written to `/data/output/ct.nii.gz`.
-
-Inference uses sliding window with 192³ patches, 50% overlap, and Gaussian blending.
-
-Without Docker:
+Or without Docker:
 
 ```bash
 pip install -r requirements.txt
@@ -46,3 +43,8 @@ python train.py
 
 Weights are saved to `outputs/checkpoints/best_model.pth` (lowest validation loss).
 
+Move new weights to `weights/best_model.pth` and build the image:
+
+```bash
+docker build -t my-baseline .
+```

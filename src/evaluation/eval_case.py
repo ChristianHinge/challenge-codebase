@@ -15,7 +15,7 @@ import argparse
 import os
 import numpy as np
 
-from metrics import (
+from .metrics import (
     compute_whole_body_suv_mae,
     compute_organ_bias_from_totalseg,
     compute_whole_body_mu_mae,
