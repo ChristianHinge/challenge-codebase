@@ -1,7 +1,4 @@
 import argparse
-import time
-import warnings
-
 import torch
 import nibabel as nib
 from pathlib import Path
@@ -16,98 +13,55 @@ from monai.transforms import (
     EnsureTyped,
 )
 
-from models.unet import build_model
-
-warnings.filterwarnings("ignore")
-
-# -----------------------------
-# ARGUMENTS
-# -----------------------------
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--input", required=True, help="Path to nacpet.nii.gz")
-parser.add_argument("--output", required=True, help="Path to save pseudo CT")
-args = parser.parse_args()
-
-total_start = time.time()
+from unet import build_model
+from dataset import get_case_features
 
 
-INPUT_PATH = Path(args.input)
-OUTPUT_PATH = Path(args.output)
-
-OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-
-# -----------------------------
-# CONFIG
-# -----------------------------
-
-MODEL_PATH = "weights/best_model.pth"
-PATCH_SIZE = (192,192,192)
+MODEL_PATH = Path(__file__).parent / "weights/best_model.pth"
+PATCH_SIZE = (192, 192, 192)
 SW_BATCH = 2
 OVERLAP = 0.5
 
 
-# -----------------------------
-# TRANSFORMS (PET only)
-# -----------------------------
+def predict(features_dir, out_path):
 
-transforms = Compose([
-    LoadImaged(keys=["pet"]),
-    EnsureChannelFirstd(keys=["pet"]),
-    NormalizeIntensityd(keys=["pet"], nonzero=True, channel_wise=True),
-    ConcatItemsd(keys=["pet"], name="input"),
-    EnsureTyped(keys=["input"])
-])
+    transforms = Compose([
+        LoadImaged(keys=["nacpet"]),
+        EnsureChannelFirstd(keys=["nacpet"]),
+        NormalizeIntensityd(keys=["nacpet"], nonzero=True, channel_wise=True),
+        ConcatItemsd(keys=["nacpet"], name="input"),
+        EnsureTyped(keys=["input"]),
+    ])
+
+    device = "cuda"
+
+    model = build_model().to(device)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=device, weights_only=True))
+    model.eval()
+
+    case = get_case_features(features_dir)
+    data = transforms(case)
+
+    x = data["input"].unsqueeze(0).to(device)
+    print("Sliding window inference...")
+    with torch.no_grad():
+        pred = sliding_window_inference(
+            x, PATCH_SIZE, SW_BATCH, model,
+            overlap=OVERLAP, mode="gaussian", progress=True,
+        )
+
+    pred_hu = pred.cpu().numpy()[0, 0] * 3000 - 1000
+    affine = data["nacpet"].meta["affine"].numpy()
+
+    print("Saving...")
+    nib.save(nib.Nifti1Image(pred_hu, affine), out_path)
+    print("Saved:", out_path)
 
 
-# -----------------------------
-# MODEL
-# -----------------------------
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("features_dir", help="Path to the subject's features/ folder")
+    parser.add_argument("out_path", help="Path to save the predicted ct.nii.gz")
+    args = parser.parse_args()
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print("Using device:", device)
-
-model = build_model().to(device)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
-model.eval()
-
-
-# -----------------------------
-# INFERENCE
-# -----------------------------
-
-data = {"pet": INPUT_PATH}
-
-data = transforms(data)
-
-x = data["input"].unsqueeze(0).to(device)
-
-with torch.no_grad():
-
-    pred = sliding_window_inference(
-        x,
-        PATCH_SIZE,
-        SW_BATCH,
-        model,
-        overlap=OVERLAP,
-        mode="gaussian",
-        progress=True
-    )
-
-pred = pred.cpu().numpy()[0,0]
-
-# convert back to HU
-pred = pred * 3000 - 1000
-
-ref = nib.load(str(INPUT_PATH))
-
-nib.save(
-    nib.Nifti1Image(pred, ref.affine, ref.header),
-    str(OUTPUT_PATH)
-)
-
-print("Saved:", OUTPUT_PATH)
-
-total_end = time.time()
-print(f"Total runtime: {total_end - total_start:.2f} seconds")
+    predict(args.features_dir, args.out_path)

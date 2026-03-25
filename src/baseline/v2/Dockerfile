@@ -1,31 +1,23 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+FROM pytorch/pytorch:2.11.0-cuda12.8-cudnn9-runtime
 
 WORKDIR /app
 
 # -----------------------------
-# System dependencies
+# Install dependencies
 # -----------------------------
-RUN apt-get update && apt-get install -y \
-    git \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
 
-# -----------------------------
-# Python dependencies
-# -----------------------------
 COPY requirements.txt .
-
-# remove torchvision (not needed + removes warning)
-RUN pip uninstall -y torchvision || true
-
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # -----------------------------
 # Copy code
 # -----------------------------
-COPY . .
 
+COPY weights weights
+COPY predict.py . 
+COPY unet.py .
+COPY dataset.py .
 # -----------------------------
 # Run inference
 # -----------------------------
-ENTRYPOINT ["python", "inference.py"]
+ENTRYPOINT ["python", "predict.py", "/data/features", "/data/output/ct.nii.gz"]

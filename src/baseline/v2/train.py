@@ -4,7 +4,7 @@ import yaml
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
-from monai.data import PersistentDataset, DataLoader
+from monai.data import Dataset, DataLoader
 from tqdm import tqdm
 
 from dataset import get_dataset
@@ -14,7 +14,6 @@ from unet import build_model
 
 torch.backends.cudnn.benchmark = True
 
-
 # -----------------------------
 # CONFIG
 # -----------------------------
@@ -22,28 +21,6 @@ torch.backends.cudnn.benchmark = True
 def load_config():
     with open("config.yaml") as f:
         return yaml.safe_load(f)
-
-
-# -----------------------------
-# CT GRADIENT LOSS
-# -----------------------------
-
-def gradient_loss(pred, target):
-
-    dx_pred = torch.abs(pred[:,:,1:,:,:] - pred[:,:,:-1,:,:])
-    dx_gt   = torch.abs(target[:,:,1:,:,:] - target[:,:,:-1,:,:])
-
-    dy_pred = torch.abs(pred[:,:,:,1:,:] - pred[:,:,:,:-1,:])
-    dy_gt   = torch.abs(target[:,:,:,1:,:] - target[:,:,:,:-1,:])
-
-    dz_pred = torch.abs(pred[:,:,:,:,1:] - pred[:,:,:,:,:-1])
-    dz_gt   = torch.abs(target[:,:,:,:,1:] - target[:,:,:,:,:-1])
-
-    return (
-        F.l1_loss(dx_pred, dx_gt)
-        + F.l1_loss(dy_pred, dy_gt)
-        + F.l1_loss(dz_pred, dz_gt)
-    )
 
 
 # -----------------------------
@@ -66,17 +43,16 @@ def main():
 
     print("Preparing dataset cache...")
 
-    dataset = PersistentDataset(
+    dataset = Dataset(
         data=data,
         transform=transforms,
-        cache_dir=os.path.dirname(cfg["data_dir"]) + "/.cache"
     )
 
     loader = DataLoader(
         dataset,
         batch_size=cfg["batch_size"],
         shuffle=True,
-        num_workers=8,
+        num_workers=cfg["num_workers"],
         pin_memory=True,
         persistent_workers=True
     )
@@ -125,10 +101,7 @@ def main():
 
                 pred = model(x)
 
-                l1 = l1_loss(pred, y)
-                grad = gradient_loss(pred, y)
-
-                loss = l1 + 0.2 * grad
+                loss = l1_loss(pred, y)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)

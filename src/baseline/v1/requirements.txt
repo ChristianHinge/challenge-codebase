@@ -1,6 +1,0 @@
-torch
-monai
-nibabel
-numpy
-tqdm
-pyyaml

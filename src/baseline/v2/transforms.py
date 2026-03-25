@@ -1,27 +1,21 @@
-from monai.transforms import (
-    Compose,
-    LoadImaged,
-    EnsureChannelFirstd,
-    NormalizeIntensityd,
-    ScaleIntensityRanged,
-    ConcatItemsd,
-    RandSpatialCropd,
-    RandFlipd,
-    EnsureTyped,
-)
+from monai.transforms import *
 
+
+#NOTE: The baseline uses only the NAC-PET as input
+# however, your model may use all images and metadata available
+# under the /features folder
 
 def get_train_transforms(patch_size):
 
     transforms = Compose(
         [
 
-            LoadImaged(keys=["pet", "ct"]),
+            LoadImaged(keys=["nacpet", "ct"]),
 
-            EnsureChannelFirstd(keys=["pet", "ct"]),
+            EnsureChannelFirstd(keys=["nacpet", "ct"]),
 
             NormalizeIntensityd(
-                keys=["pet"],
+                keys=["nacpet"],
                 nonzero=True,
                 channel_wise=True
             ),
@@ -35,16 +29,17 @@ def get_train_transforms(patch_size):
                 clip=True,
             ),
 
-            # now input is just PET
+            # now input is just nacpet
             ConcatItemsd(
-                keys=["pet"],
+                keys=["nacpet"],
                 name="input"
             ),
 
-            RandSpatialCropd(
+            RandSpatialCropSamplesd(
                 keys=["input","ct"],
                 roi_size=patch_size,
-                random_size=False
+                random_size=False,
+                num_samples=2
             ),
 
             RandFlipd(
