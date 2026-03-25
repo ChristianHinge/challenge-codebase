@@ -7,9 +7,9 @@ import torch.nn.functional as F
 from monai.data import PersistentDataset, DataLoader
 from tqdm import tqdm
 
-from datasets.dataset import get_dataset
-from datasets.transforms import get_train_transforms
-from models.unet import build_model
+from dataset import get_dataset
+from transforms import get_train_transforms
+from unet import build_model
 
 
 torch.backends.cudnn.benchmark = True
@@ -20,7 +20,7 @@ torch.backends.cudnn.benchmark = True
 # -----------------------------
 
 def load_config():
-    with open("configs/config.yaml") as f:
+    with open("config.yaml") as f:
         return yaml.safe_load(f)
 
 
@@ -62,7 +62,6 @@ def main():
 
     transforms = get_train_transforms(
         cfg["patch_size"],
-        cfg["spacing"]
     )
 
     print("Preparing dataset cache...")
@@ -70,16 +69,16 @@ def main():
     dataset = PersistentDataset(
         data=data,
         transform=transforms,
-        cache_dir="outputs/cache"
+        cache_dir=os.path.dirname(cfg["data_dir"]) + "/.cache"
     )
 
     loader = DataLoader(
         dataset,
         batch_size=cfg["batch_size"],
         shuffle=True,
-        num_workers=0,
-        pin_memory=False,
-        persistent_workers=False
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True
     )
     
     model = build_model().to(device)

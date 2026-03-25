@@ -11,7 +11,7 @@ from monai.transforms import (
 )
 
 
-def get_train_transforms(patch_size, spacing):
+def get_train_transforms(patch_size):
 
     transforms = Compose(
         [
