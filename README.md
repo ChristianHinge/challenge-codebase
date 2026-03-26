@@ -116,8 +116,6 @@ train/
 
 A simple patch-based MONAI 3D UNet that predicts pseudo-CT from NAC-PET only. It is provided as a starting-point reference — participants are expected to improve on it by incorporating MRI and topogram inputs.
 
-A pre-built Docker image is available for download (see [website](https://bic-mac-challenge.github.io/)).
-
 **Direct Python usage:**
 
 ```bash
@@ -126,55 +124,21 @@ python src/baseline/predict.py <features_dir> <output_ct.nii.gz>
 python src/baseline/predict.py data/sub-000/features/ results/sub-000/ct_pred.nii.gz
 ```
 
----
-## 🐳 Inference Docker (`src/baseline-inference/`)
-
-To simplify reproducibility and submission, the baseline model is also provided as a **fully self-contained Docker image**. This container wraps the same baseline UNet model and runs inference directly from the command line.
-
-This Docker image should be considered the **official baseline submission** — participants are expected to improve upon it.
-
-### 📦 Pull Image
+**Docker usage:**
 
 ```bash
-docker pull ghcr.io/bic-mac-challenge/inference:latest
-```
+docker pull ghcr.io/bic-mac-challenge/baseline:latest
 
-### ▶️ Run Inference
-
-```bash
 docker run --rm \
   --gpus all \
-  -v /absolute/path/to/data:/data \
-  ghcr.io/bic-mac-challenge/inference:latest \
-  --input /data/sub-XXX/features/nacpet.nii.gz \
-  --output /data/sub-XXX/pseudo_ct.nii.gz
+  -v /path/to/sub-XXX/features:/data/features:ro \
+  -v /path/to/output:/data/output \
+  ghcr.io/bic-mac-challenge/baseline:latest
 ```
 
-### 📁 Input
+The predicted CT is written to `/data/output/ct.nii.gz`. All weights and dependencies are baked into the image — no internet access needed at runtime.
 
-* Expects NAC-PET input (`nacpet.nii.gz`)
-* Path must be mounted into the container (e.g., `/data`)
-
-### 📁 Output
-
-* Writes predicted CT (in HU) to the specified output path
-
-### ⚙️ Notes
-
-* All model weights and dependencies are **baked into the container**
-* No internet access is required at runtime
-* Designed to be **fully compliant with challenge submission requirements**
-* Serves as a **reference baseline for participants**
-
-### 🧠 Relation to Baseline Code
-
-This container directly wraps the implementation in:
-
-```
-src/baseline/
-```
-
-with identical preprocessing, model architecture, and inference logic.
+---
 
 ## ⚙️ Reconstruction Pipeline (`src/recon/`)
 
