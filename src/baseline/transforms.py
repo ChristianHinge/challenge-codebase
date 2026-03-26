@@ -5,7 +5,7 @@ from monai.transforms import *
 # however, your model may use all images and metadata available
 # under the /features folder
 
-def get_train_transforms(patch_size):
+def get_transforms(patch_size, num_samples=2):
 
     transforms = Compose(
         [
@@ -36,25 +36,25 @@ def get_train_transforms(patch_size):
             ),
 
             RandSpatialCropSamplesd(
-                keys=["input","ct"],
+                keys=["input", "ct"],
                 roi_size=patch_size,
                 random_size=False,
-                num_samples=2
+                num_samples=num_samples
             ),
 
             RandFlipd(
-                keys=["input","ct"],
+                keys=["input", "ct"],
                 spatial_axis=0,
                 prob=0.5
             ),
 
             RandFlipd(
-                keys=["input","ct"],
+                keys=["input", "ct"],
                 spatial_axis=1,
                 prob=0.5
             ),
 
-            EnsureTyped(keys=["input","ct"]),
+            EnsureTyped(keys=["input", "ct"]),
 
         ]
     )

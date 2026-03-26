@@ -2,30 +2,23 @@ import os
 import torch
 import yaml
 import matplotlib.pyplot as plt
-import torch.nn.functional as F
-
-from monai.data import Dataset, DataLoader, CacheDataset, PersistentDataset
+from monai.data import DataLoader, CacheDataset, PersistentDataset
 from tqdm import tqdm
 
 from dataset import get_dataset
-from transforms import get_train_transforms
+from transforms import get_transforms
 from unet import build_model
 
 
 torch.backends.cudnn.benchmark = True
 
-# -----------------------------
-# CONFIG
-# -----------------------------
+
 
 def load_config():
     with open("config.yaml") as f:
         return yaml.safe_load(f)
 
 
-# -----------------------------
-# TRAIN
-# -----------------------------
 
 def main():
 
@@ -35,30 +28,49 @@ def main():
 
     print("Using device:", device)
 
-    data = get_dataset(cfg["data_dir"])
+    all_data = get_dataset(cfg["data_dir"])
+    val_data, train_data = all_data[:2], all_data[2:]
 
-    transforms = get_train_transforms(
-        cfg["patch_size"],
-    )
+    train_transforms = get_transforms(cfg["patch_size"], cfg["train_num_samples"])
+    val_transforms = get_transforms(cfg["patch_size"], cfg["val_num_samples"])
 
-    print("Preparing dataset ...")
-    dataset = PersistentDataset(
-        data=data,
-        transform=transforms,
+    print("Preparing train dataset ...")
+    train_dataset = PersistentDataset(
+        data=train_data,
+        transform=train_transforms,
         cache_dir=cfg["cache_dir"]
     )
-
-    print("Caching dataset...")
-    dataset = CacheDataset(
-        data=dataset,
+    print("Caching train dataset...")
+    train_dataset = CacheDataset(
+        data=train_dataset,
         cache_rate=1.0,
         num_workers=8,
     )
-
     loader = DataLoader(
-        dataset,
+        train_dataset,
         batch_size=cfg["batch_size"],
         shuffle=True,
+        num_workers=cfg["num_workers"],
+        pin_memory=True,
+        persistent_workers=True
+    )
+
+    print("Preparing val dataset ...")
+    val_dataset = PersistentDataset(
+        data=val_data,
+        transform=val_transforms,
+        cache_dir=cfg["cache_dir"] + "_val"
+    )
+    print("Caching val dataset...")
+    val_dataset = CacheDataset(
+        data=val_dataset,
+        cache_rate=1.0,
+        num_workers=4,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=cfg["batch_size"],
+        shuffle=False,
         num_workers=cfg["num_workers"],
         pin_memory=True,
         persistent_workers=True
@@ -81,13 +93,15 @@ def main():
 
     scaler = torch.amp.GradScaler("cuda")
 
-    os.makedirs("outputs/checkpoints", exist_ok=True)
-    os.makedirs("outputs/logs", exist_ok=True)
-    os.makedirs("outputs/plots", exist_ok=True)
+    out = cfg["output_dir"]
+    os.makedirs(f"{out}/checkpoints", exist_ok=True)
+    os.makedirs(f"{out}/logs", exist_ok=True)
+    os.makedirs(f"{out}/plots", exist_ok=True)
 
-    best_loss = float("inf")
+    best_val_loss = float("inf")
 
-    loss_history = []
+    train_loss_history = []
+    val_loss_history = []
 
     print("Starting training...")
 
@@ -120,41 +134,57 @@ def main():
 
             pbar.set_description(f"loss {loss.item():.4f}")
 
-        avg_loss = epoch_loss / len(loader)
-
-        print("Epoch", epoch, "Loss", avg_loss)
-
-        loss_history.append(avg_loss)
+        avg_train_loss = epoch_loss / len(loader)
 
         scheduler.step()
 
-        # best checkpoint
-        if avg_loss < best_loss:
+        # validation
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for batch in val_loader:
+                x = batch["input"].to(device)
+                y = batch["ct"].to(device)
+                with torch.amp.autocast("cuda"):
+                    pred = model(x)
+                    loss = l1_loss(pred, y)
+                val_loss += loss.item()
+        avg_val_loss = val_loss / len(val_loader)
 
-            best_loss = avg_loss
+        print(f"Epoch {epoch}  train={avg_train_loss:.4f}  val={avg_val_loss:.4f}")
+
+        train_loss_history.append(avg_train_loss)
+        val_loss_history.append(avg_val_loss)
+
+        # best checkpoint (by val)
+        if avg_val_loss < best_val_loss:
+
+            best_val_loss = avg_val_loss
 
             torch.save(
                 model.state_dict(),
-                "outputs/checkpoints/best_model.pth"
+                f"{out}/checkpoints/best_model.pth"
             )
 
         # last checkpoint
         torch.save(
             model.state_dict(),
-            "outputs/checkpoints/last_model.pth"
+            f"{out}/checkpoints/last_model.pth"
         )
 
         # log
-        with open("outputs/logs/train_log.txt","a") as f:
-            f.write(f"{epoch},{avg_loss}\n")
+        with open(f"{out}/logs/train_log.txt", "a") as f:
+            f.write(f"{epoch},{avg_train_loss},{avg_val_loss}\n")
 
         # plot loss
         plt.figure()
-        plt.plot(loss_history)
+        plt.plot(train_loss_history, label="train")
+        plt.plot(val_loss_history, label="val")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
-        plt.title("Training Loss")
-        plt.savefig("outputs/plots/loss_curve.png")
+        plt.title("Train / Val Loss")
+        plt.legend()
+        plt.savefig(f"{out}/plots/loss_curve.png")
         plt.close()
 
 

@@ -1,9 +1,12 @@
 data_dir: /data/bic-mac-data/train
 cache_dir: /data/bic-mac-cache 
-batch_size: 1 #batch_size is actually 2, since monai samples two patches per volume
+batch_size: 1
 num_workers: 2
+output_dir: outputs2
 
 epochs: 250
 learning_rate: 0.0003
 
 patch_size: [192,192,192]
+train_num_samples: 2
+val_num_samples: 8
