@@ -38,7 +38,7 @@ derived from CT after HU→μ conversion.
 
 # Requirements
 
--   Python **3.10+**
+-   Python **3.12**
 -   [`uv`](https://github.com/astral-sh/uv) for environment and
     dependency management
 
@@ -46,24 +46,12 @@ derived from CT after HU→μ conversion.
 
 # Installation
 
-Clone the repository:
+Clone the repository and install dependencies:
 
 ``` bash
 git clone <repository_url>
 cd <repository_folder>
-```
-
-Create and activate a virtual environment:
-
-``` bash
-uv venv
-source .venv/bin/activate
-```
-
-Install required dependencies:
-
-``` bash
-uv pip install numpy nibabel
+uv sync
 ```
 
 ------------------------------------------------------------------------
@@ -115,55 +103,72 @@ Both must:
 
 # Running the Evaluation
 
-Run the evaluation script with:
+There are two entry points: `eval_case.py` for a single subject and `eval_dataset.py` for a
+full dataset (this matches the challenge leaderboard computation, including the dataset-level
+Brain Outlier Score).
+
+## Single subject
 
 ``` bash
-python eval.py --subject_path <subject_path> --pred_pet <pred_pet> --pred_ct <pred_ct> [-all | -specific_metric <metric_name>]
+python eval_case.py \
+  --subject_path <subject_path> \
+  --pred_pet <pred_pet.nii.gz> \
+  --pred_ct <pred_ct.nii.gz>
 ```
+
+`--pred_pet` and `--pred_ct` are both optional — omit either to skip the corresponding metrics.
+
+Note: Brain Outlier Score is a dataset-level metric and is not computed by `eval_case.py`.
+
+## Full dataset
+
+``` bash
+python eval_dataset.py \
+  --dataset_path <dataset_path> \
+  --pred_dir <predictions_dir>
+```
+
+`<predictions_dir>` must contain one sub-folder per subject, each with `ct.nii.gz` and `pet.nii.gz`.
 
 ------------------------------------------------------------------------
 
 # Arguments
 
+## `eval_case.py`
+
   Argument             Description
   -------------------- ---------------------------------
-  `--subject_path`     Path to the subject directory
-  `--pred_pet`         Path to the predicted PET NIfTI
-  `--pred_ct`          Path to the predicted CT NIfTI
-  `-all`               Run all evaluation metrics
-  `-specific_metric`   Run only a single metric
+  `--subject_path`     Path to the subject directory (must contain `ct-label/` and `pet-label/`)
+  `--pred_pet`         Path to the predicted PET NIfTI (optional)
+  `--pred_ct`          Path to the predicted CT NIfTI (optional)
+
+## `eval_dataset.py`
+
+  Argument             Description
+  -------------------- -------------------------------------------------------
+  `--dataset_path`     Root directory containing subject folders with ground-truth labels
+  `--pred_dir`         Directory with one sub-folder per subject (each containing `ct.nii.gz` and `pet.nii.gz`)
+  `--subjects`         Optional explicit list of subject IDs (default: all sub-folders in pred_dir)
 
 ------------------------------------------------------------------------
 
 # Example
 
-Run all metrics:
+Evaluate a single subject:
 
 ``` bash
-python eval.py --subject_path /data/sub-000 --pred_pet /results/pred_pet.nii.gz --pred_ct /results/pred_ct.nii.gz -all
+python eval_case.py \
+  --subject_path /data/sub-000 \
+  --pred_pet /results/sub-000/pet.nii.gz \
+  --pred_ct /results/sub-000/ct.nii.gz
 ```
 
-Run only CT μ-MAE:
+Evaluate a full dataset:
 
 ``` bash
-python eval.py --subject_path /data/sub-000 --pred_pet /results/pred_pet.nii.gz --pred_ct /results/pred_ct.nii.gz -specific_metric ct_mae
-```
-
-------------------------------------------------------------------------
-
-# Available Metrics
-
-The following metrics can be executed individually:
-
-    whole_body_mae
-    brain_outlier
-    organ_bias
-    ct_mae
-
-Example:
-
-``` bash
-python eval.py --subject_path <subject_path> --pred_pet <pred_pet> --pred_ct <pred_ct> -specific_metric whole_body_mae
+python eval_dataset.py \
+  --dataset_path /data/bic-mac/train \
+  --pred_dir /results/my_method
 ```
 
 ------------------------------------------------------------------------
@@ -174,9 +179,8 @@ python eval.py --subject_path <subject_path> --pred_pet <pred_pet> --pred_ct <pr
     Subject: sub-000
     ----------------------------------------------------
     Whole-body SUV MAE        : 0.124512
-    Brain Outlier Score       : 0.912341
     Organ Bias                : 6.382100%
-    CT μ-MAE                  : 0.000218
+    CT MAE                    : 0.000218
     ====================================================
 
 ------------------------------------------------------------------------

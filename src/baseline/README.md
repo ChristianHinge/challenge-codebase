@@ -19,11 +19,11 @@ The baseline model has already been pretrained
 Run with Docker:
 
 ```bash
-docker run ghcr.io/bic-mac-challenge/baseline \
- --memory 120g \
+docker run --rm \
+  --memory 120g \
   -v /path/to/sub-XXX/features:/data/features:ro \
   -v /path/to/output:/data/output \
-  bic-mac-baseline
+  ghcr.io/bic-mac-challenge/baseline
 ```
 
 Or without Docker:

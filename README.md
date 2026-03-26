@@ -121,9 +121,9 @@ A pre-built Docker image is available for download (see [website](https://bic-ma
 **Direct Python usage:**
 
 ```bash
-python src/baseline/model.py <input_dir> <output_ct.nii.gz>
+python src/baseline/predict.py <features_dir> <output_ct.nii.gz>
 # Example:
-python src/baseline/model.py data/sub-000/features/ results/sub-000/ct_pred.nii.gz
+python src/baseline/predict.py data/sub-000/features/ results/sub-000/ct_pred.nii.gz
 ```
 
 ---
@@ -241,19 +241,27 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 | Organ Bias (MARE) | `organ_bias` | Mean absolute relative error of mean SUV in 8 organs: brain, liver, spleen, heart, pancreas, muscle, adipose, extremities | TotalSegmentator organ labels |
 | CT MAE | `ct_mae` | Mean absolute error of attenuation coefficients (μ at 511 keV) between predicted and ground-truth CT after HU→μ conversion | Body mask, excluding ±4 cm around liver|
 
-**Run all metrics:**
+**Evaluate a single subject:**
 
 ```bash
-python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> -all
+python src/evaluation/eval_case.py \
+  --subject_path <subject_dir> \
+  --pred_pet <pred_pet.nii.gz> \
+  --pred_ct <pred_ct.nii.gz>
 ```
 
-**Run a single metric:**
+`--pred_pet` and `--pred_ct` are both optional — omit either to skip PET or CT metrics.
+Note: Brain Outlier Score is a dataset-level metric and requires multiple subjects (see below).
+
+**Evaluate a full dataset (matches challenge leaderboard):**
 
 ```bash
-python src/evaluation/eval.py <subject_dir> <pred_pet.nii.gz> <pred_ct.nii.gz> \
-  -specific_metric <metric>
-# <metric>: whole_body_mae | brain_outlier | organ_bias | ct_mae
+python src/evaluation/eval_dataset.py \
+  --dataset_path <dataset_dir> \
+  --pred_dir <predictions_dir>
 ```
+
+`<predictions_dir>` must contain one sub-folder per subject, each with `ct.nii.gz` and `pet.nii.gz`.
 
 ---
 
