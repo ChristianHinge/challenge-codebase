@@ -160,7 +160,7 @@ Converts a predicted pseudo-CT into a reconstructed ACPET image using [STIR](htt
 A pre-built image with STIR and all dependencies is available (see [website](https://bic-mac-challenge.github.io/)).
 
 ```bash
-docker pull ghcr.io/bic-mac-challenge/recon:latest  # placeholder — final name on website
+docker pull ghcr.io/bic-mac-challenge/recon:latest 
 
 docker run --rm \
   -v /path/to/sub-000/recon:/data/recon \
