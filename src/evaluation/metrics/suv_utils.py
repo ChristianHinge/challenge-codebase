@@ -2,6 +2,13 @@
 SUV Utilities
 
 Provides SUV normalization factor computation from patient weight and GT PET.
+
+NOTE: Since the units of the STIR reconstructed PET images are not Bq/mL,
+we cannot directly convert to SUV using the recorded injected dose and recorded subject weight.
+Instead, we estimate the injected dose by integrating the ground-truth PET image itself,
+and the subject weight by integrating the body mask.
+The suv_factor is then computed as (estimated subject weight) / (estimated injected dose),
+and applied to both the predicted and ground-truth PET images before computing any metric.
 """
 
 import numpy as np

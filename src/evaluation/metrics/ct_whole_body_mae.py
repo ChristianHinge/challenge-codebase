@@ -36,9 +36,9 @@ def compute_whole_body_mu_mae(
     """
     Compute voxel-wise MAE of attenuation coefficient (mu)
     inside the body mask, excluding ±4 cm around the superior
-    liver slice.
+    liver slice. This area is excluded to avoid misalignment errors from respiratory motion.
 
-    CT images are converted from HU → mu using hu_to_mu().
+    CT images are converted from HU → attenuation units (mu) using hu_to_mu().
     """
 
     # Convert CT → mu

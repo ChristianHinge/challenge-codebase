@@ -20,6 +20,15 @@ def compute_whole_body_suv_mae(
     """
     Compute voxel-wise MAE of SUV inside body,
     excluding ±4 cm around superior liver slice.
+    This area is excluded to avoid misalignment errors from respiratory motion.
+
+    NOTE:PET images are converted to SUV using compute_suv_factor().
+    since the units of the STIR reconstructed PET images are not Bq/mL, 
+    we cannot directly convert to SUV using the recorded injected dose and recorded subject weight. 
+    Instead, we estimate the injected dose by integrating the ground-truth PET image itself, 
+    and the subject weight by integrating the body mask. 
+    The suv_factor is then computed as (estimated injected dose) / (estimated subject weight),
+    and applied to both the predicted and ground-truth PET images before computing the MAE. 
     """
 
     body_mask_img = nib.load(body_mask_path)
