@@ -4,8 +4,8 @@ Metrics Package
 Exposes all evaluation metrics.
 """
 
-from .whole_body_mae import compute_whole_body_suv_mae
-from .brain_outlier import compute_brain_outlier_score
-from .organ_bias import compute_organ_bias_from_totalseg
-from .tac_bias import compute_tac_bias
-from .ct_mae import compute_whole_body_mu_mae
+from .pet_whole_body_mae import compute_whole_body_suv_mae
+from .pet_brain_outlier import compute_brain_outlier_score
+from .pet_organ_bias import compute_organ_bias
+from .pet_tac_bias import compute_tac_bias
+from .ct_whole_body_mae import compute_whole_body_mu_mae

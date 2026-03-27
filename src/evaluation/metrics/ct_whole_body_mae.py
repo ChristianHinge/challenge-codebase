@@ -29,23 +29,31 @@ LIVER_LABEL = 5
 def compute_whole_body_mu_mae(
     pred_ct_path,
     gt_ct_path,
-    body_mask_path,
+    body_seg_path,
     organ_seg_path,
     exclusion_cm=4.0,
+    save_mask_path=None,
 ):
     """
-    Compute voxel-wise MAE of attenuation coefficient (mu)
-    inside the body mask, excluding ±4 cm around the superior
-    liver slice. This area is excluded to avoid misalignment errors from respiratory motion.
+    Voxel-wise MAE of linear attenuation coefficient (mu, cm⁻¹) across the body,
+    excluding ±4 cm around the superior liver slice to reduce sensitivity to
+    respiratory misalignment. CT images are converted from HU → mu using the
+    Carney et al. 2006 bilinear model at 511 keV (see hu_to_mu()).
 
-    CT images are converted from HU → attenuation units (mu) using hu_to_mu().
+    Parameters
+    ----------
+    pred_ct_path   : path to predicted CT NIfTI (in HU)
+    gt_ct_path     : ct-label/ct.nii.gz
+    body_seg_path  : ct-label/body_seg.nii.gz
+    organ_seg_path : ct-label/organ_seg.nii.gz
+    save_mask_path : optional path to save the evaluation mask as NIfTI
     """
 
     # Convert CT → mu
     pred = hu_to_mu(pred_ct_path).get_fdata()
     gt = hu_to_mu(gt_ct_path).get_fdata()
 
-    body_mask = nib.load(body_mask_path).get_fdata() > 0
+    body_mask = nib.load(body_seg_path).get_fdata() > 0
     liver_mask = nib.load(organ_seg_path).get_fdata() == LIVER_LABEL
 
     # Slice thickness
@@ -62,5 +70,8 @@ def compute_whole_body_mu_mae(
     exclusion_mask[:, :, z_min:z_max] = True
 
     eval_mask = body_mask & (~exclusion_mask)
+
+    if save_mask_path is not None:
+        nib.save(nib.Nifti1Image(eval_mask.astype(np.uint8), nib.load(body_seg_path).affine), save_mask_path)
 
     return np.mean(np.abs(pred - gt)[eval_mask])
