@@ -2,6 +2,7 @@ import argparse
 import os
 
 import numpy as np
+from tqdm import tqdm 
 
 try:
     from .eval_case import evaluate_case
@@ -82,12 +83,12 @@ def evaluate_dataset(dataset_path, pred_dir, subjects=None, quiet=False):
     gt_pet_paths   = []
     organ_seg_paths = []
 
-    for subject_id, (with_pet, with_ct) in pred_layout.items():
+    for subject_id, (with_pet, with_ct) in tqdm(pred_layout.items(), desc="Evaluating subjects"):
         subject_path = os.path.join(dataset_path, subject_id)
         pred_pet = os.path.join(pred_dir, subject_id, "pet.nii.gz") if with_pet else None
         pred_ct  = os.path.join(pred_dir, subject_id, "ct.nii.gz")  if with_ct  else None
 
-        per_subject[subject_id] = evaluate_case(subject_path, pred_pet, pred_ct, quiet=quiet)
+        per_subject[subject_id] = evaluate_case(subject_path, pred_pet, pred_ct, quiet=True)
 
         if with_pet:
             pred_pet_paths.append(pred_pet)
