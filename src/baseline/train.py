@@ -2,7 +2,7 @@ import os
 import torch
 import yaml
 import matplotlib.pyplot as plt
-from monai.data import DataLoader, CacheDataset, PersistentDataset
+from monai.data import DataLoader, CacheDataset
 from tqdm import tqdm
 
 from dataset import get_dataset
@@ -34,15 +34,10 @@ def main():
     train_transforms = get_transforms(cfg["patch_size"], cfg["train_num_samples"])
     val_transforms = get_transforms(cfg["patch_size"], cfg["val_num_samples"])
 
-    print("Preparing train dataset ...")
-    train_dataset = PersistentDataset(
-        data=train_data,
-        transform=train_transforms,
-        cache_dir=cfg["cache_dir"]
-    )
     print("Caching train dataset...")
     train_dataset = CacheDataset(
-        data=train_dataset,
+        data=train_data,
+        transform=train_transforms,
         cache_rate=1.0,
         num_workers=8,
     )
@@ -55,15 +50,10 @@ def main():
         persistent_workers=True
     )
 
-    print("Preparing val dataset ...")
-    val_dataset = PersistentDataset(
-        data=val_data,
-        transform=val_transforms,
-        cache_dir=cfg["cache_dir"] + "_val"
-    )
     print("Caching val dataset...")
     val_dataset = CacheDataset(
-        data=val_dataset,
+        data=val_data,
+        transform=val_transforms,
         cache_rate=1.0,
         num_workers=4,
     )
@@ -89,9 +79,8 @@ def main():
         T_max=cfg["epochs"]
     )
 
+    scaler  = torch.amp.GradScaler("cuda")
     l1_loss = torch.nn.L1Loss()
-
-    scaler = torch.amp.GradScaler("cuda")
 
     out = cfg["output_dir"]
     os.makedirs(f"{out}/checkpoints", exist_ok=True)
@@ -115,8 +104,9 @@ def main():
 
         for batch in pbar:
 
-            x = batch["input"].to(device)
-            y = batch["ct"].to(device)
+            x    = batch["input"].to(device)
+            y    = batch["ct"].to(device)
+            mask = batch["prediction_mask"].to(device)
 
             optimizer.zero_grad()
 
@@ -124,7 +114,7 @@ def main():
 
                 pred = model(x)
 
-                loss = l1_loss(pred, y)
+                loss = l1_loss(pred[mask.bool()], y[mask.bool()])
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -143,11 +133,12 @@ def main():
         val_loss = 0
         with torch.no_grad():
             for batch in val_loader:
-                x = batch["input"].to(device)
-                y = batch["ct"].to(device)
+                x    = batch["input"].to(device)
+                y    = batch["ct"].to(device)
+                mask = batch["prediction_mask"].to(device)
                 with torch.amp.autocast("cuda"):
                     pred = model(x)
-                    loss = l1_loss(pred, y)
+                    loss = l1_loss(pred[mask.bool()], y[mask.bool()])
                 val_loss += loss.item()
         avg_val_loss = val_loss / len(val_loader)
 

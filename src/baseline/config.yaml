@@ -2,7 +2,7 @@ data_dir: /data/bic-mac-data/train
 cache_dir: /data/bic-mac-cache 
 batch_size: 1
 num_workers: 2
-output_dir: outputs2
+output_dir: outputs4
 
 epochs: 250
 learning_rate: 0.0003

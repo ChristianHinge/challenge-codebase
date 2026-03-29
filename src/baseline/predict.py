@@ -18,6 +18,7 @@ from dataset import get_case_features
 
 
 MODEL_PATH = Path(__file__).parent / "weights/best_model.pth"
+MODEL_PATH = Path("/sonne/hinge/Projects/challenge-codebase/src/baseline/outputs2/checkpoints/last_model.pth")
 PATCH_SIZE = (192, 192, 192)
 SW_BATCH = 2
 OVERLAP = 0.5
@@ -28,7 +29,7 @@ def predict(features_dir, out_path):
     transforms = Compose([
         LoadImaged(keys=["nacpet"]),
         EnsureChannelFirstd(keys=["nacpet"]),
-        NormalizeIntensityd(keys=["nacpet"], nonzero=True, channel_wise=True),
+        NormalizeIntensityd(keys=["nacpet"], nonzero=False, subtrahend=0, channel_wise=True),
         ConcatItemsd(keys=["nacpet"], name="input"),
         EnsureTyped(keys=["input"]),
     ])
