@@ -15,7 +15,7 @@ except ImportError:
     )
 
 
-def evaluate_case(subject_path, pred_pet_path=None, pred_ct_path=None, quiet=False):
+def evaluate_subject(subject_path, pred_pet_path=None, pred_ct_path=None, quiet=False):
     """
     Run metrics for a single subject.
 
@@ -116,7 +116,7 @@ def main():
     if args.pred_pet is None and args.pred_ct is None:
         parser.error("At least one of --pred_pet or --pred_ct must be provided.")
 
-    evaluate_case(args.subject_path, args.pred_pet, args.pred_ct)
+    evaluate_subject(args.subject_path, args.pred_pet, args.pred_ct)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ Metrics:
 """
 
 from .eval_dataset import evaluate_dataset
-from .eval_case import evaluate_case
+from .eval_subject import evaluate_subject
 from .metrics import (
     compute_whole_body_suv_mae,
     compute_brain_outlier_score,

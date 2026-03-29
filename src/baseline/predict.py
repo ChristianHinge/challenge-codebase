@@ -14,7 +14,7 @@ from monai.transforms import (
 )
 
 from unet import build_model
-from dataset import get_case_features
+from dataset import get_subject_features
 
 
 MODEL_PATH = Path(__file__).parent / "weights/best_model.pth"
@@ -39,8 +39,8 @@ def predict(features_dir, out_path):
     model.load_state_dict(torch.load(MODEL_PATH, map_location=device, weights_only=True))
     model.eval()
 
-    case = get_case_features(features_dir)
-    data = transforms(case)
+    subject = get_subject_features(features_dir)
+    data = transforms(subject)
 
     x = data["input"].unsqueeze(0).to(device)
     print("Sliding window inference...")

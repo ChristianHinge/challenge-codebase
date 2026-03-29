@@ -2,8 +2,8 @@ import json
 import os
 
 
-def get_case_features(features_dir):
-    """Return all available model inputs for a case: NAC-PET, topogram, combined and chunked
+def get_subject_features(features_dir):
+    """Return all available model inputs for a subject: NAC-PET, topogram, combined and chunked
     DIXON MRI (in/out-phase), MRI face mask, and metadata (sex, age, height, weight).
     These are everything a participant model may use to predict the pseudo-CT."""
     paths = {
@@ -20,8 +20,8 @@ def get_case_features(features_dir):
     return {**paths, **metadata}
 
 
-def get_case_ct_labels(ct_label_dir):
-    """Return label paths for a case. The target to predict is `ct` (Hounsfield Units),
+def get_subject_ct_labels(ct_label_dir):
+    """Return label paths for a subject. The target to predict is `ct` (Hounsfield Units),
     along with body/organ segmentations and a prediction mask."""
     return {
         "ct":               os.path.join(ct_label_dir, "ct.nii.gz"),
@@ -32,11 +32,11 @@ def get_case_ct_labels(ct_label_dir):
 
 
 def get_dataset(data_dir):
-    """Build a list of cases from a directory of subjects, each combining features and CT labels."""
-    cases = []
+    """Build a list of subjects from a directory of subjects, each combining features and CT labels."""
+    subjects = []
     for sub in sorted(os.listdir(data_dir)):
-        case_dir = os.path.join(data_dir, sub)
-        case = get_case_features(os.path.join(case_dir, "features"))
-        case.update(get_case_ct_labels(os.path.join(case_dir, "ct-label")))
-        cases.append(case)
-    return cases
+        subject_dir = os.path.join(data_dir, sub)
+        subject = get_subject_features(os.path.join(subject_dir, "features"))
+        subject.update(get_subject_ct_labels(os.path.join(subject_dir, "ct-label")))
+        subjects.append(subject)
+    return subjects

@@ -5,10 +5,10 @@ import numpy as np
 from tqdm import tqdm 
 
 try:
-    from .eval_case import evaluate_case
+    from .eval_subject import evaluate_subject
     from .metrics import compute_brain_outlier_score
 except ImportError:
-    from eval_case import evaluate_case
+    from eval_subject import evaluate_subject
     from metrics import compute_brain_outlier_score
 
 
@@ -88,7 +88,7 @@ def evaluate_dataset(dataset_path, pred_dir, subjects=None, quiet=False):
         pred_pet = os.path.join(pred_dir, subject_id, "pet.nii.gz") if with_pet else None
         pred_ct  = os.path.join(pred_dir, subject_id, "ct.nii.gz")  if with_ct  else None
 
-        per_subject[subject_id] = evaluate_case(subject_path, pred_pet, pred_ct, quiet=True)
+        per_subject[subject_id] = evaluate_subject(subject_path, pred_pet, pred_ct, quiet=True)
 
         if with_pet:
             pred_pet_paths.append(pred_pet)
