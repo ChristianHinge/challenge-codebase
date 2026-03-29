@@ -15,9 +15,9 @@
 - [Overview](#overview)
 - [Documentation](#documentation)
 - [Getting Started](#getting-started)
-- [Data Format](#data-format)
-- [Pseudo-CT Baseline](#baseline-srcbaseline)
-- [Reconstruction](#reconstruction-pipeline-srcrecon)
+- [Dataset Structure](#dataset-structure)
+- [Pseudo-CT Baseline](#pseudo-ct-baseline-srcbaseline)
+- [Reconstruction](#reconstruction-srcrecon)
 - [Evaluation](#evaluation-srcevaluation)
 - [Submission](#submission)
 
