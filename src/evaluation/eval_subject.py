@@ -107,7 +107,7 @@ def main():
         epilog="Note: Brain Outlier Score is a dataset-level metric and is not computed here. Use eval_dataset.py to compute it across multiple subjects.",
     )
 
-    parser.add_argument("--subject_path", required=True, help="Path to subject directory, e.g. /data/sub-000 (must contain ct-label/ if using --pred_ct, pet-label/ if using --pred_pet)")
+    parser.add_argument("--subject_dir", required=True, help="Path to subject directory, e.g. /data/sub-000 (must contain ct-label/ if using --pred_ct, pet-label/ if using --pred_pet)")
     parser.add_argument("--pred_pet",     default=None,  help="Path to predicted PET NIfTI")
     parser.add_argument("--pred_ct",      default=None,  help="Path to predicted CT NIfTI")
 
@@ -116,7 +116,7 @@ def main():
     if args.pred_pet is None and args.pred_ct is None:
         parser.error("At least one of --pred_pet or --pred_ct must be provided.")
 
-    evaluate_subject(args.subject_path, args.pred_pet, args.pred_ct)
+    evaluate_subject(args.subject_dir, args.pred_pet, args.pred_ct)
 
 
 if __name__ == "__main__":

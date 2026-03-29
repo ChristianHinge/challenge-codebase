@@ -60,8 +60,8 @@ def predict(features_dir, out_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("features_dir", help="Path to the subject's features/ folder")
-    parser.add_argument("out_path", help="Path to save the predicted ct.nii.gz")
+    parser.add_argument("--features_dir", required=True, help="Path to the subject's features/ folder")
+    parser.add_argument("--output_ct",    required=True, help="Path to save the predicted pseudo-CT (e.g. './psudeo-ct.nii.gz')")
     args = parser.parse_args()
 
-    predict(args.features_dir, args.out_path)
+    predict(args.features_dir, args.output_ct)

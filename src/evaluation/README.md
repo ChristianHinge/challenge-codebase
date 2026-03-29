@@ -91,7 +91,7 @@ Each subject directory must follow the structure below:
 Participants must provide:
 
 -   **Predicted PET volume**
--   **Predicted CT volume**
+-   **Pseudo-CT volume**
 
 Both must:
 
@@ -103,28 +103,28 @@ Both must:
 
 # Running the Evaluation
 
-There are two entry points: `eval_case.py` for a single subject and `eval_dataset.py` for a
+There are two entry points: `eval_subject.py` for a single subject and `eval_dataset.py` for a
 full dataset (this matches the challenge leaderboard computation, including the dataset-level
 Brain Outlier Score).
 
 ## Single subject
 
 ``` bash
-python eval_case.py \
-  --subject_path <subject_path> \
+python eval_subject.py \
+  --subject_dir <subject_dir> \
   --pred_pet <pred_pet.nii.gz> \
   --pred_ct <pred_ct.nii.gz>
 ```
 
 `--pred_pet` and `--pred_ct` are both optional — omit either to skip the corresponding metrics.
 
-Note: Brain Outlier Score is a dataset-level metric and is not computed by `eval_case.py`.
+Note: Brain Outlier Score is a dataset-level metric and is not computed by `eval_subject.py`.
 
 ## Full dataset
 
 ``` bash
 python eval_dataset.py \
-  --dataset_path <dataset_path> \
+  --dataset_dir <dataset_dir> \
   --pred_dir <predictions_dir>
 ```
 
@@ -134,11 +134,11 @@ python eval_dataset.py \
 
 # Arguments
 
-## `eval_case.py`
+## `eval_subject.py`
 
   Argument             Description
   -------------------- ---------------------------------
-  `--subject_path`     Path to the subject directory (must contain `ct-label/` and `pet-label/`)
+  `--subject_dir`      Path to the subject directory (must contain `ct-label/` and `pet-label/`)
   `--pred_pet`         Path to the predicted PET NIfTI (optional)
   `--pred_ct`          Path to the predicted CT NIfTI (optional)
 
@@ -146,7 +146,7 @@ python eval_dataset.py \
 
   Argument             Description
   -------------------- -------------------------------------------------------
-  `--dataset_path`     Root directory containing subject folders with ground-truth labels
+  `--dataset_dir`      Root directory containing subject folders with ground-truth labels
   `--pred_dir`         Directory with one sub-folder per subject (each containing `ct.nii.gz` and `pet.nii.gz`)
   `--subjects`         Optional explicit list of subject IDs (default: all sub-folders in pred_dir)
 
@@ -157,8 +157,8 @@ python eval_dataset.py \
 Evaluate a single subject:
 
 ``` bash
-python eval_case.py \
-  --subject_path /data/sub-000 \
+python eval_subject.py \
+  --subject_dir /data/sub-000 \
   --pred_pet /results/sub-000/pet.nii.gz \
   --pred_ct /results/sub-000/ct.nii.gz
 ```
@@ -167,7 +167,7 @@ Evaluate a full dataset:
 
 ``` bash
 python eval_dataset.py \
-  --dataset_path /data/bic-mac/train \
+  --dataset_dir /data/bic-mac/train \
   --pred_dir /results/my_method
 ```
 

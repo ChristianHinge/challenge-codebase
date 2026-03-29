@@ -119,9 +119,9 @@ A simple patch-based MONAI 3D UNet that predicts pseudo-CT from NAC-PET only. It
 **Direct Python usage:**
 
 ```bash
-python src/baseline/predict.py <features_dir> <output_ct.nii.gz>
+python src/baseline/predict.py --features_dir <features_dir> --output_ct <ct.nii.gz>
 # Example:
-python src/baseline/predict.py data/sub-000/features/ results/sub-000/ct_pred.nii.gz
+python src/baseline/predict.py --features_dir data/sub-000/features/ --output_ct results/sub-000/ct.nii.gz
 ```
 
 **Docker usage:**
@@ -187,7 +187,7 @@ Set `VERBOSE=1` to stream STIR subprocess output to the terminal in addition to 
 ### Option 2: Direct Python (requires local STIR)
 
 ```bash
-python src/recon/main.py <recon_dir> <ct.nii.gz> <output_dir> [-w] [-v]
+python src/recon/main.py --recon_dir <recon_dir> --ct <ct.nii.gz> --output_dir <output_dir> [-w] [-v]
 ```
 
 `pet.nii.gz` and `intermediates/` are written inside `output_dir`. Use `-w`/`--overwrite` to rerun from scratch and `-v`/`--verbose` to stream STIR output to the terminal.
@@ -208,8 +208,8 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 **Evaluate a single subject:**
 
 ```bash
-python src/evaluation/eval_case.py \
-  --subject_path <subject_dir> \
+python src/evaluation/eval_subject.py \
+  --subject_dir <subject_dir> \
   --pred_pet <pred_pet.nii.gz> \
   --pred_ct <pred_ct.nii.gz>
 ```
@@ -221,7 +221,7 @@ Note: Brain Outlier Score is a dataset-level metric and requires multiple subjec
 
 ```bash
 python src/evaluation/eval_dataset.py \
-  --dataset_path <dataset_dir> \
+  --dataset_dir <dataset_dir> \
   --pred_dir <predictions_dir>
 ```
 

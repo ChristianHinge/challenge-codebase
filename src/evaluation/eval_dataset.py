@@ -148,7 +148,7 @@ def main():
         ),
     )
     parser.add_argument(
-        "--dataset_path",
+        "--dataset_dir",
         required=True,
         help="Path to the downloaded BIC-MAC dataset split, e.g. bic-mac-data/train or bic-mac-data/val",
     )
@@ -165,7 +165,7 @@ def main():
     )
     args = parser.parse_args()
 
-    evaluate_dataset(args.dataset_path, args.pred_dir, args.subjects)
+    evaluate_dataset(args.dataset_dir, args.pred_dir, args.subjects)
 
 
 if __name__ == "__main__":

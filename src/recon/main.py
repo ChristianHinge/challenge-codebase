@@ -168,9 +168,9 @@ Expected recon_dir contents:
   face_and_bed_mask.nii.gz
 """,
     )
-    parser.add_argument("recon_dir", help="Reconstruction directory (e.g. /data/sub-000/recon)")
-    parser.add_argument("ct", help="Input CT NIfTI file to be used for attenuation correction reconstruction")
-    parser.add_argument("output_dir", help="Output directory; pet.nii.gz and intermediates/ will be written here")
+    parser.add_argument("--recon_dir",   required=True, help="Reconstruction directory (e.g. /data/sub-000/recon)")
+    parser.add_argument("--ct",          required=True, help="Input CT NIfTI file to be used for attenuation correction reconstruction")
+    parser.add_argument("--output_dir",  required=True, help="Output directory; pet.nii.gz and intermediates/ will be written here")
     parser.add_argument("-w", "--overwrite", action="store_true", default=False, help="Overwrite existing intermediate and output files")
     parser.add_argument("-v", "--verbose", action="store_true", default=False, help="Show output from STIR subprocess calls")
     args = parser.parse_args()
