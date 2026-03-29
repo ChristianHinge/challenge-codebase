@@ -28,7 +28,7 @@ def reconstruction_pipeline(
         overwrite=False,
         verbose=False,
         ):
-
+    
     out_pet_nifti_path         = os.path.join(output_dir, 'pet.nii.gz')
     intemediates_dir           = os.path.join(output_dir, 'intermediates')
     face_swapped_ct_path       = os.path.join(intemediates_dir, 'ct_face_swapped.nii.gz')
@@ -39,6 +39,8 @@ def reconstruction_pipeline(
     add_acf_sino_path          = os.path.join(intemediates_dir, "add.hs")
     mult_acf_sino_path         = os.path.join(intemediates_dir, "mult.hs")
     pet_hv_path                = os.path.join(intemediates_dir, "pet_20.hv")
+
+    log.warning("Running reconstruction requires 20GB of RAM and takes 20-120 minutes depending on CPU. The intermediates folder takes up ~50GB of additional space. Consider deleting it after succesfull reconstruction")
 
     os.makedirs(intemediates_dir, exist_ok=True)
 
@@ -106,11 +108,11 @@ def reconstruction_pipeline(
     # Step 6: Calculate ACF sinogram
     if not os.path.exists(acf_sino_path) or overwrite:
         t = time.perf_counter()
-        log.info("[6/10] Converting mu-map from image to ACF sinogram...")
+        log.info("[6/10] Converting mu-map image to ACF sinogram...")
         calculate_acf(mumap_hv_path, add_sino_path, acf_sino_path, acf_forwardprojector)
         log.info(f"      done ({time.perf_counter()-t:.1f}s)")
     else:
-        log.info("[6/10] Converting mu-map from image to ACF sinogram (skipped)")
+        log.info("[6/10] Converting mu-map image to ACF sinogram (skipped)")
 
     # Step 7: Apply ACF to additive sinogram
     if not os.path.exists(add_acf_sino_path) or overwrite:
@@ -133,7 +135,7 @@ def reconstruction_pipeline(
     # Step 9: Reconstruct PET
     if not os.path.exists(pet_hv_path) or overwrite:
         t = time.perf_counter()
-        log.info("[9/10] Reconstructing PET (this will take some time)...")
+        log.info("[9/10] Reconstructing PET (this will take some time - especially first subiteration)...")
         run_reconstruction(recon_template, add_acf_sino_path, mult_acf_sino_path, prompts_sino_path, pet_hv_path, verbose=verbose)
         log.info(f"      done ({time.perf_counter()-t:.1f}s)")
     else:

@@ -3,7 +3,7 @@
 Your container is run once per subject with two volume mounts:
 
 ```bash
-docker run --rm \
+timeout 300 docker run --rm \
   --memory 128g \
   --network none \
   --gpus all \
@@ -31,9 +31,8 @@ Your container must write the predicted CT to **`/data/output/ct.nii.gz`** — a
 
 ## Baseline as a Starting Point
 
-The baseline Dockerfile lives at `src/baseline/v2/inference/docker/Dockerfile`. It uses a PyTorch base image, installs dependencies from `requirements.txt`, copies code and weights, and sets the inference script as the entrypoint. Use it as a template.
+The baseline Dockerfile lives at `src/baseline/Dockerfile`. It uses a PyTorch base image, installs dependencies from `requirements.txt`, copies code and weights, and sets the inference script as the entrypoint. You can use it as a template.
 
-The key adaptation for any submission is reading inputs from `/data/features/` and writing output to `/data/output/`:
 
 ```python
 FEATURES_DIR = Path("/data/features")
@@ -49,24 +48,14 @@ nib.save(nib.Nifti1Image(pred_hu, ref.affine, ref.header), str(OUTPUT_DIR / "ct.
 
 ---
 
-## Submitting
+## Validating Before Submission
 
-Save your image and email it (or a download link) to **bic-mac-challenge@github.io**:
-
-```bash
-docker save my-model:latest | gzip > my-model.tar.gz
-```
-
-Subject line: `[DRY-RUN] <TeamName>` or `[FINAL] <TeamName>`
-
-See [submission-guide.md](submission-guide.md) for phase details.
+Before sending us your image, run it on the 4 validation subjects and upload the predictions to Codabench to confirm your container works end-to-end and your scores look reasonable. We cannot debug containers that fail silently on our infrastructure, so this step is required.
 
 ---
 
-## Common Pitfalls
+## Submitting
 
-**Hardcoded paths** — make sure your container reads from `/data/features/`, not from training-time paths.
+See [submission-guide.md](submission-guide.md) for full submission instructions, including how to share your image via Docker Hub or a compressed archive.
 
-**Affine mismatch** — always copy the header from `features/nacpet.nii.gz` when saving output; don't derive it from an intermediate resampled volume.
-
-**Network downloads at runtime** — `torch.hub`, `huggingface_hub`, etc. will fail. Bake weights in during `docker build`.
+---

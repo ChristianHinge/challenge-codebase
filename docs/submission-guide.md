@@ -33,27 +33,27 @@ If you only submit `ct.nii.gz`, you will receive CT metrics only. Submitting bot
 
 - NIfTI format (`.nii.gz`)
 - Same shape and affine as `features/nacpet.nii.gz`
-- CT values in Hounsfield units (valid range approximately −1000 to +3000 HU)
+- CT values in Hounsfield units 
 
 ### Zip structure
 
 ```
 submission.zip
-├── sub-068/
+├── sub-004/
 │   ├── ct.nii.gz
 │   └── pet.nii.gz   # optional
-├── sub-074/
+├── sub-009/
 │   ├── ct.nii.gz
-│   └── pet.nii.gz
-├── sub-081/
+│   └── pet.nii.gz   # optional
+├── sub-010/
 │   ├── ct.nii.gz
-│   └── pet.nii.gz
-└── sub-087/
+│   └── pet.nii.gz   # optional
+└── sub-018/
     ├── ct.nii.gz
-    └── pet.nii.gz
+    └── pet.nii.gz   # optional
 ```
 
-Upload to the [Codabench competition page](https://www.codabench.org/competitions/12555/).
+Upload to the [Codabench competition page](https://www.codabench.org/competitions/12555/#/participate-tab).
 
 ---
 
@@ -67,25 +67,28 @@ We run your container on the 4 validation subjects and return either:
 
 See [docker-packaging.md](docker-packaging.md) for how to build and test your container locally before submitting.
 
-### Container requirements
-
-Your container must:
-- Read inputs from `/data/features/` (read-only mount)
-- Write `ct.nii.gz` to `/data/output/`
-- Complete within 5 minutes per subject
-- Not require network access
 
 ### How to submit
 
-Save your image and email it (or a download link) to **bic-mac-challenge@github.io**:
+Email **bic-mac-challenge@github.io** with subject line `[DRY-RUN] <TeamName>` and include:
+- Team name, Docker image name and tag
+- A short description of your approach
+- A link to your image using **one** of the options below
 
+**Option A — Docker Hub (preferred):**
+```bash
+docker tag my-model:latest <dockerhub-username>/my-model:latest
+docker push <dockerhub-username>/my-model:latest
+```
+Send us the full image name (e.g. `myteam/my-model:latest`).
+
+**Option B — Compressed archive via file sharing:**
 ```bash
 docker save my-model:latest | gzip > my-model.tar.gz
 ```
+Upload `my-model.tar.gz` to Google Drive, Dropbox, or similar and share the download link.
 
-Subject line: `[DRY-RUN] <TeamName>`
-
-Include in the body: team name, Docker image name and tag, and a short description of your approach.
+Dry Run submissions are limited to two per month per team.
 
 ---
 
@@ -103,11 +106,7 @@ Results and winner announcements: **September 1, 2026**.
 
 ### How to submit
 
-Same as the dry run — email your container to **bic-mac-challenge@github.io** with subject:
-
-```
-[FINAL] <TeamName>
-```
+Same as the dry run — email your container to **bic-mac-challenge@github.io** with subject `[FINAL] <TeamName>`, using Docker Hub or a compressed archive with a file sharing link.
 
 ---
 

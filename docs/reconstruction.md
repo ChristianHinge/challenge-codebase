@@ -23,6 +23,9 @@ Intermediate outputs (μ-map, ACF sinogram, STIR-format files) are written to `o
 
 ---
 
+> [!WARNING]
+> Running reconstruction requires **~20 GB of RAM** and takes **20–120 minutes** depending on CPU speed. The `intermediates/` folder uses **~50 GB** of additional disk space — consider deleting it after a successful reconstruction.
+
 ## Running the Pipeline
 
 ### Option 1: Docker (recommended)

@@ -54,8 +54,8 @@ ENV OVERWRITE=""
 ENV VERBOSE=""
 
 CMD python3 main.py \
-    /data/recon \
-    /data/ct/ct.nii.gz \
-    /data/output \
+    --recon_dir /data/recon \
+    --ct /data/ct/ct.nii.gz \
+    --output_dir /data/output \
     ${OVERWRITE:+--overwrite} \
     ${VERBOSE:+--verbose}

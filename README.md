@@ -154,7 +154,10 @@ docker run --rm \
   ghcr.io/bic-mac-challenge/recon:latest
 ```
 
-The reconstructed PET is written to `/data/output/pet.nii.
+The reconstructed PET is written to `/data/output/pet.nii.gz`.
+
+> [!WARNING]
+> Running reconstruction requires **~20 GB of RAM** and takes **20–120 minutes** depending on CPU speed. The `intermediates/` folder uses **~50 GB** of additional disk space — consider deleting it after a successful reconstruction.
 
 ---
 
