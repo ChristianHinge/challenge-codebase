@@ -6,89 +6,42 @@ This guide explains how to submit predictions at each phase of the BIC-MAC Chall
 
 ## Phase Overview
 
-| Phase | Period | What you submit | What we run |
-|-------|--------|----------------|-------------|
-| **Validation** | May 15 – Jun 15 | NIfTI predictions uploaded to Codabench | Evaluation metrics directly |
-| **Dry Run** | May 15 – Jun 15 | Docker container via email | Container only (no recon, no scoring) |
-| **Final Test** | Jun 15 – Aug 15 | Docker container via email | Container + full recon + evaluation |
+| Phase | Period | What you submit | What we return |
+|-------|--------|----------------|----------------|
+| **Validation** | May 15 – Aug 15 | Zip of NIfTI predictions uploaded to Codabench | All metrics on the 4 validation subjects |
+| **Dry Run** | May 15 – Aug 15 | Docker container via email | CT metrics on the 4 validation subjects (or error logs if the container failed) |
+| **Final Test** | Aug 15 | Docker container via email | Full evaluation on the unseen test set |
 
-Phases 1 (Validation) and 2 (Dry Run) run **concurrently**. You can — and should — do both during the pre-evaluation period before the final test opens.
+Validation and Dry Run run **concurrently** throughout the challenge. Use them to iterate on your model before the final deadline. There is no limit on submissions during either phase.
 
 ---
 
-## Phase 1: Validation — NIfTI Upload (n=4)
+## Phase 1: Validation — NIfTI Upload
 
-This phase lets you evaluate your model on the 4 validation subjects using Codabench, without needing a Docker container.
+Submit your predictions directly as NIfTI files. No Docker container needed.
 
-### What you have locally
+### What to submit
 
-Validation subjects include all the inputs your model needs plus the sinogram data required for reconstruction:
+Run your model on the 4 validation subjects (you have both `features/` and `recon/` for these) and produce predictions:
 
-```
-val/sub-XXX/
-├── features/     # model inputs (nacpet, MRI, topogram, metadata)
-└── recon/        # sinogram data (mult, add, prompts sinograms + offset.json)
-```
+1. **Pseudo-CT** (`ct.nii.gz`) — run your model on `features/`
+2. **Reconstructed PET** (`pet.nii.gz`, optional) — run the reconstruction pipeline on your pseudo-CT using the provided Docker image (see [reconstruction.md](reconstruction.md))
 
-Labels are **not** included — Codabench holds the ground truth.
+If you only submit `ct.nii.gz`, you will receive CT metrics only. Submitting both unlocks all four metrics.
 
-### Step 1: Generate your pseudo-CT predictions
+### Output requirements
 
-Run your model on each of the 4 validation subjects and save the output as `ct.nii.gz` in Hounsfield units.
-
-```bash
-# Example — adapt to your model's interface
-python your_model.py val/sub-068/features/ outputs/sub-068/ct.nii.gz
-python your_model.py val/sub-074/features/ outputs/sub-074/ct.nii.gz
-python your_model.py val/sub-081/features/ outputs/sub-081/ct.nii.gz
-python your_model.py val/sub-087/features/ outputs/sub-087/ct.nii.gz
-```
-
-**Output requirements:**
 - NIfTI format (`.nii.gz`)
 - Same shape and affine as `features/nacpet.nii.gz`
-- Values in Hounsfield units (valid range approximately −1000 to +3000 HU)
+- CT values in Hounsfield units (valid range approximately −1000 to +3000 HU)
 
-### Step 2: Optionally generate PET predictions (for PET metrics)
-
-If you want PET-based metrics (Whole-body SUV MAE, Brain Outlier Score, Organ Bias), you also need to run the reconstruction pipeline on your pseudo-CT to produce `pet.nii.gz`.
-
-Use the organizer-provided Docker image (see [website](https://bic-mac-challenge.github.io/)):
-
-```bash
-docker run --rm \
-  -v val/sub-068/recon:/data/recon \
-  -v outputs/sub-068/ct.nii.gz:/data/ct/ct.nii.gz \
-  -v outputs/sub-068/recon_out:/data/output \
-  ghcr.io/bic-mac-challenge/recon:latest
-# reconstructed PET → outputs/sub-068/recon_out/pet.nii.gz
-```
-
-See the [main README](../README.md#reconstruction-pipeline-srcrecon) for full reconstruction instructions.
-
-### Step 3: Evaluate locally (optional)
-
-You can sanity-check your results on the 8 fully-labelled training subjects (which have ground-truth CT and PET labels) before uploading:
-
-```bash
-python src/evaluation/eval.py \
-  train/sub-000 \
-  outputs/sub-000/pet.nii.gz \
-  outputs/sub-000/ct.nii.gz \
-  -all
-```
-
-See [src/evaluation/readme.md](../src/evaluation/readme.md) for full usage.
-
-### Step 4: Upload to Codabench
-
-Organize your predictions into a zip archive with this structure:
+### Zip structure
 
 ```
 submission.zip
 ├── sub-068/
 │   ├── ct.nii.gz
-│   └── pet.nii.gz   # optional, needed for PET metrics
+│   └── pet.nii.gz   # optional
 ├── sub-074/
 │   ├── ct.nii.gz
 │   └── pet.nii.gz
@@ -100,83 +53,65 @@ submission.zip
     └── pet.nii.gz
 ```
 
-Upload this zip to the Codabench competition page (see [website](https://bic-mac-challenge.github.io/) for the direct link).
+Upload to the [Codabench competition page](https://www.codabench.org/competitions/12555/).
 
 ---
 
-## Phase 2: Dry Run — Container Check (concurrent with Phase 1)
+## Phase 2: Dry Run — Container Check
 
-The dry run verifies that your Docker container runs correctly on organizer hardware **before** the final test. No reconstruction or scoring is done — a pass/fail result with any error logs is returned.
+The dry run verifies that your Docker container runs correctly on organizer hardware **before** the final deadline. Submit as early as possible to leave time to fix issues.
 
-### What you need
+We run your container on the 4 validation subjects and return either:
+- **CT metrics** — your container ran successfully and produced valid pseudo-CTs
+- **Error logs** — the container failed, with details of what went wrong
 
-A Docker container that:
-- Reads inputs from `/data/features/` (read-only mount)
-- Writes `ct.nii.gz` to `/data/output/`
-- Runs within 5 minutes on the validation subjects
-- Does not require network access
+See [docker-packaging.md](docker-packaging.md) for how to build and test your container locally before submitting.
 
-See [docker-packaging.md](docker-packaging.md) for how to build and test your container locally.
+### Container requirements
+
+Your container must:
+- Read inputs from `/data/features/` (read-only mount)
+- Write `ct.nii.gz` to `/data/output/`
+- Complete within 5 minutes per subject
+- Not require network access
 
 ### How to submit
 
-1. Save your image to a tar archive:
+Save your image and email it (or a download link) to **bic-mac-challenge@github.io**:
 
 ```bash
 docker save my-model:latest | gzip > my-model.tar.gz
 ```
 
-2. Email the archive (or a link to it) to **bic-mac-challenge@github.io** with subject line:
+Subject line: `[DRY-RUN] <TeamName>`
 
-```
-[DRY-RUN] <TeamName>
-```
-
-Include in the email body:
-- Team name
-- Short description of your approach
-- Docker image name and tag
-- Any environment variables or flags required at runtime (if any)
-
-### What you receive back
-
-- **Pass**: Your container ran successfully on all 4 validation subjects — you are cleared for the final test.
-- **Fail**: Error logs showing where the container failed. Fix the issue and resubmit.
-
-There is no limit on dry-run submissions during the pre-evaluation period.
+Include in the body: team name, Docker image name and tag, and a short description of your approach.
 
 ---
 
-## Phase 3: Final Test — Container Submission (Jun 15 – Aug 15)
+## Phase 3: Final Test
 
-The final evaluation runs your container on the **unseen test set**. You do not have access to these subjects' features or recon data.
+Submit your Docker container by **August 15, 2026**. The container does not need to be the same as the one used for the dry run — you can continue to improve your model right up to the deadline.
 
-The organizers will:
-
-1. Run your container on each test subject (same `docker run` command as the dry run)
+We will:
+1. Run your container on each unseen test subject
 2. Validate the output `ct.nii.gz` (shape, affine, HU range)
-3. Run the full STIR reconstruction pipeline on each pseudo-CT
+3. Run the full reconstruction pipeline on each pseudo-CT
 4. Evaluate all metrics against ground-truth CT and PET
 
 Results and winner announcements: **September 1, 2026**.
 
 ### How to submit
 
-Same process as the dry run — email your container to **bic-mac-challenge@github.io** with subject:
+Same as the dry run — email your container to **bic-mac-challenge@github.io** with subject:
 
 ```
 [FINAL] <TeamName>
 ```
 
-**Deadline: August 15, 2026.**
-
-You may update your container after the dry run (e.g., to fix issues found, retrain with more data). The container submitted for the final test does not need to be the same as the dry-run container.
-
 ---
 
-## Resource Constraints (Phases 2 & 3)
-
-These constraints are enforced identically in both the dry run and the final test:
+## Hardware Constraints (Phases 2 & 3)
 
 | Resource | Specification |
 |----------|--------------|
@@ -186,13 +121,4 @@ These constraints are enforced identically in both the dry run and the final tes
 | Wall-clock time per subject | 5 minutes |
 | Network access | None (`--network none`) |
 
-All model weights and dependencies must be baked into the image. No downloads at inference time.
-
----
-
-## Common Mistakes
-
-- **Output affine mismatch**: Your `ct.nii.gz` must have the same shape and affine as `features/nacpet.nii.gz`. Copying the header from the NAC-PET is the safest approach.
-- **Hardcoded paths**: Make sure your container reads from `/data/features/` and writes to `/data/output/`, not from local training paths.
-- **Network downloads at runtime**: The container runs with `--network none`. Download weights during `docker build`, not during inference.
-- **Output not written**: If your script crashes silently, the output file may not exist. Always verify with a quick test locally (see [docker-packaging.md](docker-packaging.md)).
+All weights and dependencies must be baked into the image. No downloads at inference time.
