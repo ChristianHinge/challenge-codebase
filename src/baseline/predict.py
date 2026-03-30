@@ -17,7 +17,7 @@ from unet import build_model
 from dataset import get_subject_features
 
 
-MODEL_PATH = Path(__file__).parent / "outputs/best_model.pth"
+MODEL_PATH = Path(__file__).parent / "outputs3/checkpoints/best_model.pth"
 PATCH_SIZE = (192, 192, 192)
 SW_BATCH = 2
 OVERLAP = 0.5
