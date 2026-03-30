@@ -5,7 +5,7 @@ import os
 def get_subject_features(features_dir):
     """Return all available model inputs for a subject: NAC-PET, topogram, combined and chunked
     DIXON MRI (in/out-phase), MRI face mask, and metadata (sex, age, height, weight).
-    These are everything a participant model may use to predict the pseudo-CT."""
+    These are everything a your model may use to predict the pseudo-CT."""
     paths = {
         "nacpet":                  os.path.join(features_dir, "nacpet.nii.gz"),
         "topogram":                os.path.join(features_dir, "topogram.nii.gz"),

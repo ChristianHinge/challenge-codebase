@@ -20,7 +20,7 @@ Run with Docker:
 
 ```bash
 docker run --rm \
-  --memory 120g \
+  --memory 128g \
   -v /path/to/sub-000/features:/data/features:ro \
   -v /path/to/output:/data/output \
   ghcr.io/bic-mac-challenge/baseline
@@ -33,6 +33,9 @@ pip install -r requirements.txt
 python predict.py --features_dir /path/to/sub-000/features --output_ct pseudo-ct.nii.gz
 ```
 
+Weights are loaded from `outputs/checkpoints/best_model.pth`
+
+
 ## Training
 
 Edit `config.yaml` to set your data path, then:
@@ -42,8 +45,6 @@ python train.py
 ```
 
 Weights are saved to `outputs/checkpoints/best_model.pth` (lowest validation loss).
-
-Move new weights to `weights/best_model.pth` and build the image:
 
 ```bash
 docker build -t my-baseline .

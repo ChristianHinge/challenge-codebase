@@ -13,11 +13,11 @@ RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 # Copy code
 # -----------------------------
 
-COPY weights weights
+COPY outputs .
 COPY predict.py . 
 COPY unet.py .
 COPY dataset.py .
 # -----------------------------
 # Run inference
 # -----------------------------
-ENTRYPOINT ["python", "predict.py", "/data/features", "/data/output/ct.nii.gz"]
+ENTRYPOINT ["python", "predict.py", "--features_dir", "/data/features", "--output_ct", "/data/output/ct.nii.gz"]

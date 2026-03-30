@@ -17,8 +17,7 @@ from unet import build_model
 from dataset import get_subject_features
 
 
-MODEL_PATH = Path(__file__).parent / "weights/best_model.pth"
-MODEL_PATH = Path("/sonne/hinge/Projects/challenge-codebase/src/baseline/outputs4/checkpoints/best_model.pth")
+MODEL_PATH = Path(__file__).parent / "outputs/best_model.pth"
 PATCH_SIZE = (192, 192, 192)
 SW_BATCH = 2
 OVERLAP = 0.5
@@ -51,6 +50,7 @@ def predict(features_dir, out_path):
             overlap=OVERLAP, mode="gaussian", progress=True,
         )
 
+    # Apply inverse of normalization to get HU
     pred_hu = pred.cpu().numpy()[0, 0] * 3000 - 1000
     affine = data["nacpet"].meta["affine"].numpy()
 
