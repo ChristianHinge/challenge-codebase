@@ -45,23 +45,23 @@ def get_transforms(patch_size, num_samples=2):
                 num_samples=num_samples
             ),
 
-            RandGaussianNoised(keys=["input"], prob=0.5, mean=0.0, std=0.05),
-            RandScaleIntensityd(keys=["input"], factors=0.1, prob=0.5),
-            RandShiftIntensityd(keys=["input"], offsets=0.1, prob=0.5),
-            RandGaussianSmoothd(
-                keys=["input"],
-                sigma_x=(0.5, 1.0), sigma_y=(0.5, 1.0), sigma_z=(0.5, 1.0),
-                prob=0.3,
-            ),
+            #RandGaussianNoised(keys=["input"], prob=0.5, mean=0.0, std=0.05),
+            #RandScaleIntensityd(keys=["input"], factors=0.1, prob=0.5),
+            #RandShiftIntensityd(keys=["input"], offsets=0.1, prob=0.5),
+            #RandGaussianSmoothd(
+            #    keys=["input"],
+            #    sigma_x=(0.5, 1.0), sigma_y=(0.5, 1.0), sigma_z=(0.5, 1.0),
+            #    prob=0.3,
+            #),
 
-            RandAffined(
-                keys=["input", "ct", "prediction_mask"],
-                prob=0.5,
-                rotate_range=(0.087, 0.087, 0.087),  # ±5°
-                scale_range=(0.05, 0.05, 0.05),       # ±5%
-                mode=("bilinear", "bilinear", "nearest"),
-                padding_mode="border",
-            ),
+            # RandAffined(
+            #    keys=["input", "ct", "prediction_mask"],
+            #    prob=0.5,
+            #    rotate_range=(0.087, 0.087, 0.087),  # ±5°
+            #    scale_range=(0.05, 0.05, 0.05),       # ±5%
+            #    mode=("bilinear", "bilinear", "nearest"),
+            #    padding_mode="border",
+            # ),
 
             EnsureTyped(keys=["input", "ct", "prediction_mask"]),
 

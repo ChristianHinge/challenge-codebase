@@ -38,8 +38,8 @@ def main():
     train_dataset = CacheDataset(
         data=train_data,
         transform=train_transforms,
-        cache_rate=1.0,
-        num_workers=8,
+        cache_rate=1.0, # Change this to reduce memory footprint
+        num_workers=cfg["num_workers"],
     )
     loader = DataLoader(
         train_dataset,
@@ -55,7 +55,7 @@ def main():
         data=val_data,
         transform=val_transforms,
         cache_rate=1.0,
-        num_workers=4,
+        num_workers=cfg["num_workers"],
     )
     val_loader = DataLoader(
         val_dataset,
@@ -106,15 +106,15 @@ def main():
 
             x    = batch["input"].to(device)
             y    = batch["ct"].to(device)
-            mask = batch["prediction_mask"].to(device)
-
+            mask = batch["prediction_mask"].bool().to(device)
+            y[~mask] = 0 # don't bother trying to predict the bed 
             optimizer.zero_grad()
 
             with torch.amp.autocast("cuda"):
 
                 pred = model(x)
 
-                loss = l1_loss(pred[mask.bool()], y[mask.bool()])
+                loss = l1_loss(pred, y)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -135,10 +135,12 @@ def main():
             for batch in val_loader:
                 x    = batch["input"].to(device)
                 y    = batch["ct"].to(device)
-                mask = batch["prediction_mask"].to(device)
+                mask = batch["prediction_mask"].bool().to(device)
+                y[~mask] = 0 # don't bother trying to predict the bed 
+
                 with torch.amp.autocast("cuda"):
                     pred = model(x)
-                    loss = l1_loss(pred[mask.bool()], y[mask.bool()])
+                    loss = l1_loss(pred, y)
                 val_loss += loss.item()
         avg_val_loss = val_loss / len(val_loader)
 
