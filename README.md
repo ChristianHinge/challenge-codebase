@@ -48,6 +48,7 @@ All train cases have CT labels, but due to the size of the sinograms, only 8 inc
 
 | Guide | Description |
 |-------|-------------|
+| [Rules](docs/rules.md) | All rules for participating teams including training data policy, and pretraining policy |
 | [PET Background](docs/pet-background.md) | PET physics and attenuation correction — start here if you're new to PET |
 | [Reconstruction Pipeline](docs/reconstruction.md) | How the pseudo-CT is turned into an AC-PET image; how to run it locally |
 | [Submission Guide](docs/submission-guide.md) | Validation, dry-run, and final submission phases explained |
