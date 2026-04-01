@@ -19,7 +19,7 @@ from dataset import get_subject_features
 
 MODEL_PATH = Path(__file__).parent / "outputs/checkpoints/best_model.pth"
 PATCH_SIZE = (192, 192, 192)
-SW_BATCH = 2
+SW_BATCH = 1 # You can increase this if to speed up inference at the cost of VRAM
 OVERLAP = 0.5
 
 
@@ -44,10 +44,11 @@ def predict(features_dir, out_path):
 
     x = data["input"].unsqueeze(0).to(device)
     print("Sliding window inference...")
-    with torch.no_grad():
+    with torch.no_grad(), torch.amp.autocast("cuda"):
         pred = sliding_window_inference(
             x, PATCH_SIZE, SW_BATCH, model,
             overlap=OVERLAP, mode="gaussian", progress=True,
+            sw_device="cuda", device="cpu",
         )
 
     # Apply inverse of normalization to get HU
