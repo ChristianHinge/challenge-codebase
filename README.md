@@ -173,6 +173,7 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 | Organ Bias | `PET` | Mean absolute relative error of mean SUV in 8 organs: brain, liver, spleen, heart, pancreas, muscle, adipose, extremities | TotalSegmentator organ labels |
 | CT MU MAE | `CT` | Mean absolute error of attenuation coefficients (μ at 511 keV) between predicted and ground-truth CT after HU→μ conversion | Body mask, excluding ±4 cm axial slices at top of liver|
 | TAC Bias | `Dynamic PET` | Absolute relative error of the integral of time-activity-curves (TACs) for the aorta and selected brain regions. NOTE: Metric is computed only for the final test set due to the size of the dynamic sinograms. | Brain regions and aorta|
+
 **Evaluate a single subject:**
 
 ```bash
