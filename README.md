@@ -2,14 +2,14 @@
 
 **Big Cross-Modal Attenuation Correction** — synthesize pseudo-CT from multi-modal PET/MRI input to enable CT-less PET reconstruction.
 
-[Challenge website](https://bic-mac-challenge.github.io/)
-
-[Dataset](https://huggingface.co/datasets/DEPICT-RH/BIC-MAC)
-
-[CodaBench submission & leaderboard](https://www.codabench.org/competitions/12555/)
+🏆 [Challenge website](https://bic-mac-challenge.github.io/)
+ | 🗂️ [Dataset](https://huggingface.co/datasets/DEPICT-RH/BIC-MAC)
+ | 🏆 [CodaBench submission & leaderboard](https://www.codabench.org/competitions/12555/)
 
 ---
+## Updates
 
+- April 7, 2026: [NEW DATA POLICY] The use of public datasets for pretraining and other use-cases is now allowed under certain conditions. Please see [docs/rules.md](docs/rules.md) for details. 
 ## Table of Contents
 
 - [Overview](#overview)
