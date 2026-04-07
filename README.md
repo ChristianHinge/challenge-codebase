@@ -23,26 +23,20 @@
 
 ---
 
+<a id="overview"></a>
+
 ## 🧠 Overview
 
-Your algorithm receives the files under `features/` for each subject and must output a pseudo-CT volume as a NIfTI file in Hounsfield units (HU). Predictions are evaluated two ways:
+Your algorithm receives the files under `features/` for each subject and must output a pseudo-CT volume as a NIfTI file in Hounsfield units (HU). Predictions are evaluated two ways (see [Evaluation](#evaluation-srcevaluation) for metric definitions):
 
 1. **CT accuracy** — Predicted pseudo-CT is compared directly against the ground-truth CT
 2. **PET accuracy** — Predicted pseudo-CT is fed into the reconstruction pipeline to produce an attenuation-corrected PET image, which is then compared against the ground-truth PET
 
 Note that no PET reconstruction experience is needed to participate in the challenge, and the main purpose of the reconstruction is to enable clinically meaningful metrics. 
 
-The dataset comprises 99 subject-unique cases, with 20 reserved for testing and the remaining 79 available on huggingface and split as follows:
-
-| Split | Subjects | Contents |
-|-------|----------|----------|
-| `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
-| `train/` (no recon) | 67 | `features/` + `ct-label/` |
-| `val/` | 4 | `features/` + `recon/` |
-
-All train cases have CT labels, but due to the size of the sinograms, only 8 include the `recon/` and `pet-label/` folders needed for closed loop reconstruction. Validation subjects have sinogram `recon/` data but no labels — submit predicted pseudo-CTs and reconstructed PETs to Codabench to get live leaderboard metrics during the challenge.
-
 ---
+
+<a id="documentation"></a>
 
 ## 📚 Documentation
 
@@ -56,6 +50,8 @@ All train cases have CT labels, but due to the size of the sinograms, only 8 inc
 | [Tips & FAQ](docs/tips-and-faq.md) | Common questions, pitfalls, and practical advice |
 
 ---
+
+<a id="getting-started"></a>
 
 ## 🚀 Getting Started
 
@@ -76,8 +72,22 @@ src/
 
 ---
 
+<a id="dataset-structure"></a>
+
 ## 🗂️ Dataset structure
-All images are resampled to the label CT image (tensor size: 512x512x531, voxel size 1.52x1.52,2.00mm^3) and structured in four folders per case. 
+
+The dataset comprises 99 subject-unique studies, with 20 reserved for testing and the remaining 79 available on huggingface and split as follows:
+
+| Split | Subjects | Contents |
+|-------|----------|----------|
+| `train/` (full) | 8 | `features/` + `ct-label/` + `recon/` + `pet-label/` |
+| `train/` (no recon) | 67 | `features/` + `ct-label/` |
+| `val/` | 4 | `features/` + `recon/` |
+
+All train subjects have CT labels, but due to the size of the sinograms, only 8 include the `recon/` and `pet-label/` folders needed for closed loop reconstruction. Validation subjects have sinogram `recon/` data but no labels — submit predicted pseudo-CTs and reconstructed PETs to Codabench to get live leaderboard metrics during the challenge. The train subjects with `recon/` data are: `sub-000, sub-001, sub-002, sub-005, sub-006, sub-008, sub-013, sub-014`.
+
+
+All images except those in `pet-label` are resampled to the label CT image (tensor size: 512x512x531, voxel size 1.52x1.52,2.00mm^3). NIfTI images are structured in four folders per subject. 
 - `features/` All the files you can use as input to your pseudo-CT model during inference.
 - `ct-label/` The CT target (`ct.nii.gz`) and segmentations for evaluation. 
 - `pet-label/` The PET target (`pet.nii.gz`) and segmentations for evaluation. 
@@ -90,33 +100,36 @@ train/
     ├── features/                          # generative model inputs
     │   ├── nacpet.nii.gz                  # non-attenuation-corrected PET. 
     │   ├── topogram.nii.gz                # 2D scout X-ray
-    │   ├── mri_chunk_{0-3}_{in/out}_phase.nii.gz    # DIXON MRI bed position (0-3), in-phase and out-phase
-    │   ├── mri_combined_{in/out}_phase.nii.gz  # stitched whole-body MRI, out-of-phase
+    │   ├── mri_chunk_{0-3}_{in/out}_phase.nii.gz    # MRI chunk (0-3), in- and out-phase
+    │   ├── mri_combined_{in/out}_phase.nii.gz  # stitched whole-body MRI, in- and out-phase
     │   ├── mri_face_mask.nii.gz           # binary anonymization mask
     │   └── metadata.json                  # {sex, age, height, weight}
     ├── ct-label/                          # ground-truth CT
-    │   ├── ct.nii.gz                      # in HU this is what your algorithm should predict
+    │   ├── ct.nii.gz                      # CT in Hounsfield Units (reference)
     │   ├── body_seg.nii.gz                # TotalSegmentator body seg.
     │   ├── organ_seg.nii.gz               # TotalSegmentator organ seg.
-    │   └── prediction_mask.nii.gz         # The generative model should focus only on these voxels (face + scanner are excluded)
-    ├── recon/                             # sinogram data
-    │   ├── mult_nac_rd85.hs/.s            # multiplicative sinogram
-    │   ├── add_nac_rd85.hs/.s             # additive sinogram
-    │   ├── prompts_rd85.hs/.s             # raw sinogram
+    │   └── prediction_mask.nii.gz         # Within-body voxels (face excluded).
+    ├── recon/                             # sinogram data for reconstruction
+    │   ├── mult_nac_rd85.hs/.s            # multiplicative sinogram (NAC)
+    │   ├── add_nac_rd85.hs/.s             # additive sinogram (NAC)
+    │   ├── prompts_rd85.hs/.s             # raw sinogram 
     │   ├── offset.json                    # bed position and gantry offset
-    │   ├── ct_face_and_bed.nii.gz         # GT CT values at face + scanner bed (automatically superimposed on your prediction before reconstruction)
+    │   ├── ct_face_and_bed.nii.gz         # inverse of prediction_mask.nii.gz
     │   └── face_and_bed_mask.nii.gz       # binary face + scanner bed mask
     └── pet-label/                         # ground-truth PET
         ├── pet.nii.gz                     # CT-attenuation-corrected PET (reference)
-        ├── body_seg.nii.gz                # body mask in PET space
-        └── organ_seg.nii.gz               # organ labels in PET space
+        ├── body_seg.nii.gz                # TotalSegmentator body seg. in PET space
+        ├── tissue_seg.nii.gz              # TotalSegmentator tissue seg. in PET space
+        └── organ_seg.nii.gz               # TotalSegmentator organ seg. in PET space
 ```
 
 ---
 
+<a id="pseudo-ct-baseline-srcbaseline"></a>
+
 ## 📦 Pseudo-CT Baseline (`src/baseline/`)
 
-A simple patch-based MONAI 3D UNet that predicts pseudo-CT from NAC-PET only. It is provided as a starting-point reference — participants are expected to improve on it by incorporating MRI and topogram inputs.
+A simple patch-based 3D UNet that predicts pseudo-CT from NAC-PET only. 
 
 **Python usage:**
 
@@ -137,9 +150,13 @@ docker run --rm \
   ghcr.io/bic-mac-challenge/baseline:latest
 ```
 
-The predicted CT is written to `/data/output/ct.nii.gz`. All weights and dependencies are baked into the image - no internet access is allowed at runtime.
+The predicted CT is written to `/data/output/ct.nii.gz`. All weights and dependencies are baked into the image, and the same is expected for your final docker image submission.
+
+You can re-train the baseline by running `train.py` and containerize it by running `docker build -t my-baseline .` (from inside the `src/baseline` folder)
 
 ---
+
+<a id="reconstruction-srcrecon"></a>
 
 ## ⚙️ Reconstruction (`src/recon/`)
 
@@ -162,6 +179,8 @@ The reconstructed PET is written to `/data/output/pet.nii.gz`.
 
 ---
 
+<a id="evaluation-srcevaluation"></a>
+
 ## 📊 Evaluation (`src/evaluation/`)
 
 Five metrics compare predicted PET and CT outputs against the ground truth:
@@ -173,6 +192,7 @@ Five metrics compare predicted PET and CT outputs against the ground truth:
 | Organ Bias | `PET` | Mean absolute relative error of mean SUV in 8 organs: brain, liver, spleen, heart, pancreas, muscle, adipose, extremities | TotalSegmentator organ labels |
 | CT MU MAE | `CT` | Mean absolute error of attenuation coefficients (μ at 511 keV) between predicted and ground-truth CT after HU→μ conversion | Body mask, excluding ±4 cm axial slices at top of liver|
 | TAC Bias | `Dynamic PET` | Absolute relative error of the integral of time-activity-curves (TACs) for the aorta and selected brain regions. NOTE: Metric is computed only for the final test set due to the size of the dynamic sinograms. | Brain regions and aorta|
+
 **Evaluate a single subject:**
 
 ```bash
@@ -198,8 +218,8 @@ python src/evaluation/eval_dataset.py \
 ```
 predictions_dir/
 ├── sub-000/
-│   ├── ct.nii.gz        # optional
-│   └── pet.nii.gz       # optional
+│   ├── ct.nii.gz        
+│   └── pet.nii.gz       
 ├── sub-001/
 │   ├── ct.nii.gz
 │   └── pet.nii.gz
@@ -207,6 +227,8 @@ predictions_dir/
 ```
 
 ---
+
+<a id="submission"></a>
 
 ## 📬 Submission
 
@@ -216,6 +238,6 @@ predictions_dir/
 | **Dry Run** | Docker container emailed to us — we run it on the 4 `val/` subjects on our hardware and return CT metrics, or error logs if the container failed |
 | **Final Test** | Docker container emailed to us — we run prediction, reconstruction, and full evaluation on the unseen test set |
 
-Validation and Dry Run are open concurrently throughout the challenge. See [docs/submission-guide.md](docs/submission-guide.md) for full instructions, and [docs/docker-packaging.md](docs/docker-packaging.md) for how to build and test your container.
+Validation and Dry Run open May 15. See [docs/submission-guide.md](docs/submission-guide.md) for full instructions, and [docs/docker-packaging.md](docs/docker-packaging.md) for how to build and test your container.
 
 
