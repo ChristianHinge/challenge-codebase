@@ -15,7 +15,7 @@
 
 - [Lung-PET-CT-Dx](https://www.cancerimagingarchive.net/collection/lung-pet-ct-dx/) 436 whole-body (no head) 18F-FDG PET/CT studies [citation](https://doi.org/10.7937/TCIA.2020.NNC2-0461)
 
-- [Deep-PSMA](https://zenodo.org/records/15281784) 100 whole-body PSMA PET/CT studies [citation](https://doi.org/10.5281/zenodo.15281783)
+- [Deep-PSMA](https://zenodo.org/records/15281784) 100 whole-body PSMA and 18F-FDG PET/CT studies [citation](https://doi.org/10.5281/zenodo.15281783)
 
 ### MRI/CT
 
