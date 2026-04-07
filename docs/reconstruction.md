@@ -1,23 +1,40 @@
 # PET Reconstruction Pipeline
 
-The reconstruction pipeline (`src/recon/`) converts a pseudo-CT into an attenuation-corrected PET image using [STIR](http://stir.sourceforge.net/) (Software for Tomographic Image Reconstruction). You do **not** need to understand or modify the pipeline to participate — it is run by the challenge organisers on your submissions. This guide is for participants who want to run it locally for closed-loop training or debugging.
+The reconstruction pipeline (`src/recon/`) converts a predicted pseudo-CT into an attenuation-corrected PET image using [STIR](http://stir.sourceforge.net/) (Software for Tomographic Image Reconstruction). You do **not** need to understand reconstruction or attenuation correction to participate, however, having an intuition of the first reconstruction steps can be a **significant advantage** when designing your pseudo-CT algorithm and loss function.
 
 ---
 
-## Pipeline Steps
-
+## Reconstruction steps
+The reconstruction 
 Given a CT (ground-truth or pseudo-CT) and the subject's sinogram data (`recon/`), the pipeline produces a reconstructed PET NIfTI:
 
-1. **Validate CT** — checks shape, affine, and HU range against the ground-truth CT
-2. **Swap face and bed** — replaces the face and scanner bed region with ground-truth CT values (so face/bed prediction is not penalised)
-3. **HU → μ-map** — converts Hounsfield units to linear attenuation coefficients at 511 keV using the Carney et al. (2006) bilinear model at 120 kVp
-4. **Smooth μ-map** — applies a 4 mm FWHM Gaussian to match scanner resolution
-5. **Resample to STIR** — resamples the μ-map onto the STIR z-axis grid (ring spacing 3.29114 mm)
-6. **Compute ACF sinogram** — forward-projects the μ-map to produce the attenuation correction factor (ACF) sinogram
-7. **Apply ACF to additive sinogram** — multiplies ACF into the scatter+randoms estimate
-8. **Apply ACF to multiplicative sinogram** — multiplies ACF into the detector normalisation sinogram
-9. **OSEM reconstruction** — reconstructs PET via ordered-subsets expectation maximisation with a 4 mm post-filter
-10. **Convert to NIfTI** — writes the reconstructed PET with the correct bed/gantry offset origin
+1. **Superimpose bed pixelated face** - The pseudo-CT face is replaced by a pre-saved pixelated face. Likewise, everything outside a ~1cm rim (pillows, bed, hair, air) is replaced by the ground truth image (see `ct_face_and_bed.nii.gz` and `face_and_bed_mask.nii.gz`). Consequently, the pseudo-CT algorithm will not benefit from trying to predict these areas. The `prediction_mask.nii.gz` under `ct-label` is the inverse mask of `face_and_bed_mask.nii.gz` and may be used to restrict training to the body region. 
+
+2. **HU → μ-map** — The pseudo-CT is a volume of Hounsfield units (HU), a relative X-ray density scale where air = −1000 and water = 0. PET reconstruction needs instead the *linear attenuation coefficient* μ (cm⁻¹) at the 511 keV photon energy of PET annihilation events.
+
+   The conversion uses a **bilinear model** (Carney et al. 2006): one linear segment maps soft tissue (HU ≤ 0, dominated by water) and a steeper segment maps bone (HU > 0). The kink at 0 HU means the functional form of the error changes depending on which side of the boundary a voxel falls on.
+
+   **Why this matters for your model:** Errors in HU are not equally costly. A 100 HU error in dense bone (HU ≈ 700) changes μ roughly three times more than the same 100 HU error in soft tissue. Optimising purely for MAE in HU space may down-weight the tissue type that matters most. 
+
+3. **Smooth μ-map** — A 4 mm FWHM Gaussian blur is applied to the μ-map before any sinogram operations. This matches the intrinsic spatial resolution of the scanner and prevents ringing artefacts from sharp CT edges propagating into the reconstructed PET.
+
+   **Why this matters for your model:** Fine structural detail in your pseudo-CT (below ~4 mm) is blurred away before it ever influences the ACF sinogram. Spending model capacity or loss weight on sub-4mm sharpness is unlikely to improve downstream PET metrics.
+
+4. **Resample to STIR** — Resamples the μ-map onto STIR's z-axis grid (ring spacing 3.29114 mm), snapping the origin to the STIR coordinate system. A technical prerequisite for STIR's forward projection.
+
+5. **Compute ACF sinogram** — The μ-map is *forward projected* along every line of response (LOR) in the PET scanner geometry, computing the total integrated attenuation each annihilation photon pair experiences along that path. The result is the **attenuation correction factor (ACF)** sinogram — a per-LOR multiplier that later undoes the attenuation bias.
+
+   Conceptually, this step is analogous to a Radon transform: the μ-map is "smeared" through the scanner geometry. An error in a single voxel affects *every* LOR passing through it, so a localised μ error (e.g. a missed bone structure) introduces a spatially coherent bias pattern across the reconstructed PET — not just a local blip.
+
+6.–7. **Apply ACF to sinograms** — The ACF sinogram is multiplied into both the *multiplicative* sinogram (detector normalisation, decay correction) and the *additive* sinogram (scatter + random coincidences). This encodes the predicted attenuation into the reconstruction inputs.
+
+   **Intuition:** If your pseudo-CT underestimates attenuation in a region (e.g. predicts soft tissue where bone should be), the ACF will under-correct: the reconstructor will "see" too few photons and reconstruct *lower* activity than reality in that region — even if no functional change is present. The relationship is roughly proportional: Δμ → proportional bias in reconstructed SUV.
+
+8. **OSEM reconstruction** — Ordered Subsets Expectation Maximisation (OSEM) is an iterative algorithm for solving the Poisson maximum-likelihood reconstruction problem. It is conceptually similar to minibatch stochastic gradient ascent on the log-likelihood of the measured sinogram given the image. Each "subset" is a partition of the LORs; each iteration updates the image using one subset. The result is followed by a 4 mm Gaussian post-filter to suppress Poisson noise.
+
+   **Why this matters for your model:** OSEM is non-linear and iterative, so ACF errors do not produce simple closed-form artefacts. However, the dominant effect of underestimated attenuation is a systematic *underestimate of SUV*, especially in deep structures (brain, heart) where photons travel through more tissue to reach the detectors. Improving your pseudo-CT in the trunk — not just the periphery — has an outsized effect on reconstruction accuracy.
+
+9. **Convert to NIfTI** — Writes the reconstructed PET volume as a NIfTI file with the correct origin, accounting for the scanner bed position and gantry offset stored in `offset.json`.
 
 Intermediate outputs (μ-map, ACF sinogram, STIR-format files) are written to `output_dir/intermediates/`. The pipeline skips steps whose outputs already exist, so it resumes automatically from a partial run.
 
