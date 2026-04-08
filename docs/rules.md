@@ -6,17 +6,17 @@ This document describes the rules governing participation in the Big Cross-Modal
 
 ## Training Data and External Resources
 
-**No additional training data is allowed.** All algorithms must be trained solely on the provided BIC-MAC training set to ensure a level playing field between hospital-based and university-based teams. Pretrained networks are allowed under certain conditions (see below)
+**Additional training data is allowed.** as long as it was released, publicly available and accessible to all participants without restrictions prior the start of the challenge (April 1st). Private datasets are NOT allowed. The use of public datasets must be disclosed in the submitted methodology paper. Please see [tips-and-faq.md](tips-and-faq.md) for suggested public datasets. If you are unsure whether a particular dataset fulfills the above criteria, please send an email to bic-mac-challenge@outlook.com. 
 
-**Pretrained networks are allowed** if they were publicly available on GitHub, Zenodo, or a comparable platform *prior to the start of the challenge* (April 1st . You may use these as initialization, feature extractors or preprocessing, but the fine-tuning data must be limited to the provided dataset.
+**Pretrained networks are allowed** if they were publicly available and accessible to all participants without restrictions (e.g. on GitHub, Huggingface, Zenodo, or a comparable platform) *prior to the start of the challenge* (April 1st). You may use these as initialization, feature extractors or preprocessing, but the fine-tuning data must be limited to the provided dataset.
 
-**Any preprocessing or augmentation of the provided data is allowed**, as long as it does not conflict with the Data User Agreement (see below).
+**Any preprocessing, manual labelling or augmentation of the BIC-MAC dataset and public datasets is allowed**, as long as it does not conflict with the other rules or the BIC-MAC Data User Agreement.
 
 ---
 
 ## Submission Limits
 
-**Validation phase (CodaBench NIfTI upload):** up to 5 submissions per day per team.
+**Validation phase (CodaBench NIfTI upload):** up to 5 submissions per day per team. The validation phase starts May 15
 
 **Dry-run (Docker container via email):** up to 2 submissions per month per team starting May 15. The organizers will verify that the container runs, respects hardware and time constraints, and produces correctly dimensioned output. The Dry-run is performed on the validation set. 
 
@@ -42,20 +42,20 @@ Your container must read from `/data/features/` (mounted read-only) and write `c
 
 ## Methodology Paper Requirement
 
-Each team must prepare a short methodology paper describing the technical approach underlying their submission. This paper must be uploaded to a public repository (e.g., arXiv) and included with the final submission email alongside the Docker container. Submissions without an accompanying methodology paper will not be evaluated.
+Each team must prepare a short methodology paper describing the technical approach underlying their submission. This paper must be uploaded to a public repository (e.g., arXiv) and included with the final submission email alongside the Docker container. 
 
 
 ## Publication Embargo
 
-Participating teams may publish their own results independently, subject to a **three-month embargo period** after the conclusion of MICCAI 2026. This embargo allows the organizers to publish the challenge summary paper first.
-
-Up to four members from each of the top five performing teams will be invited as co-authors on the challenge summary paper. Teams may opt out of inclusion in the summary paper by notifying the organizing committee via email.
+Participating teams may publish their own results independently, subject to a **three-month embargo period** after the conclusion of MICCAI 2026. This embargo allows the organizers and the invited participant coauthers to publish the challenge summary paper first. Up to four members from each of the top five performing teams will be invited as co-authors on the challenge summary paper. Teams may opt out of inclusion in the summary paper by notifying the organizing committee via email.
 
 ---
 
-## Ranking and Prizes
+## Metrics, Ranking, and Prizes
 
 Performance is ranked using a rank-based aggregation across five evaluation metrics. Each metric is averaged across all test cases, submissions are ranked per metric (1 = best), and the final score is the mean of the five metric ranks. The lowest final score wins.
+
+Please see [src/evaluation/README.md](src/evaluation/README.md) for definitions of each metric. Note that fifth metric, TAC-bias, cannot be computed locally. It is used only for the final evaluation.
 
 In the event of a tied aggregated rank, teams share the corresponding placement following Olympic-style conventions (e.g., two first places, no second place, then third place). Prize money is split equally between tied teams.
 
