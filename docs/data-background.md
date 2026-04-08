@@ -1,6 +1,6 @@
 # Data Background
 
-Understanding how the input features were acquired — and crucially, *when* — helps you reason about their alignment with the ground-truth CT and each other.
+Understanding how the input features were acquired — and crucially, *when* — helps you reason about their alignment with the ground-truth CT and each other. All participants are healthy controls. 
 
 ## Acquisition timeline
 
