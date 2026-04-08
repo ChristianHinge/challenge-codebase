@@ -8,7 +8,7 @@ We strongly suggest you start by reading [data-background.md](data-background.md
 We recommend the following public datasets if you wish to perform pretraining etc. 
 ### PET/CT
 > Note that all PET images in the following datasets are attenuation corrected (usually by the accompanying CT), which means that the PET may encode some of the CT information.
-- [Vienna QUADRA_HC](https://zenodo.org/records/16588733) 100 whole-body 18F-FDG PET/CT studies from 50 participants. Like BIC-MAC, the PET/CT is acquired on a Siemens Biograph Vision Quadra and the participants are healthy controls. [citation](https://www.nature.com/articles/s41597-025-05997-4)
+- [Vienna QUADRA_HC](https://zenodo.org/records/16588733) 96 whole-body 18F-FDG PET/CT studies from 48 participants. Like BIC-MAC, the PET/CT is acquired on a Siemens Biograph Vision Quadra and the participants are healthy controls. [citation](https://www.nature.com/articles/s41597-025-05997-4)
 
 - [AutoPET V](https://fdat.uni-tuebingen.de/records/0zs4c-89f12) 1014 whole-body 18F-FDG PET/CT studies, 597 PSMA PET/CT studies [citation](https://www.nature.com/articles/s41597-022-01718-3)
 
@@ -19,6 +19,8 @@ We recommend the following public datasets if you wish to perform pretraining et
 - [ViMED-PET](https://huggingface.co/datasets/dacthai2807/ViMed-PET)  2,757 whole-body 18F-FDG PET/CT studies. [citation](https://arxiv.org/abs/2509.24739v1)
 
 - [Lung-PET-CT-Dx](https://www.cancerimagingarchive.net/collection/lung-pet-ct-dx/) 436 whole-body (no head) 18F-FDG PET/CT studies [citation](https://doi.org/10.7937/TCIA.2020.NNC2-0461)
+
+- [Deep-PSMA](https://zenodo.org/records/15281784) 100 whole-body PSMA and 18F-FDG PET/CT studies [citation](https://doi.org/10.5281/zenodo.15281783)
 
 ### MRI/CT
 
